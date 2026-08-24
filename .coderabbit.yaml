@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+# 리뷰 코멘트를 한글로 작성
+language: "ko-KR"
+
+reviews:
+  # 리뷰 톤: chill(느슨함) / assertive(꼼꼼함) 중 선택
+  profile: "chill"
+
+  # PR에 변경 요청(Request changes) 상태를 강제할지 여부
+  request_changes_workflow: false
+
+  # PR 상단에 전체 요약 코멘트 표시
+  high_level_summary: true
+
+  # 리뷰 마무리에 시(poem) 붙이는 장난스러운 기능 끄기
+  poem: false
+
+  # 리뷰 상태(진행중/완료) 표시
+  review_status: true
+
+  # 자동 리뷰 켜기 (PR 생성/커밋 시 자동으로 리뷰 시작)
+  auto_review:
+    enabled: true
+    drafts: false # 초안(Draft) PR은 리뷰 안 함
+
+  # 프로젝트 전반에 적용되는 컨벤션/지침 (자연어로 자유롭게 작성)
+  instructions: |
+    이 프로젝트는 Spring Boot + JPA + PostgreSQL 기반 백엔드 서비스입니다.
+    다음 컨벤션을 따릅니다:
+    - 커밋 메시지는 Conventional Commits 형식(feat, fix, chore 등) 사용
+    - 결제 금액, 세션 상태 등 민감한 값은 반드시 서버에서 검증
+    - 시크릿 키나 API 키는 절대 하드코딩하지 않고 환경변수로 관리
+    - 불필요한 주석이나 import 정리 여부보다 로직 버그, 보안 이슈를 우선적으로 지적
+    - 변수명이 명백히 오해를 부르는 경우가 아니면 네이밍 스타일은 지적하지 않음
+
+  # 특정 경로에만 추가로 적용되는 지침 (선택)
+  path_instructions:
+    - path: "src/main/java/**/controller/**"
+      instructions: |
+        컨트롤러 계층입니다. 입력값 검증(@Valid), 예외 처리 누락 여부를 중점적으로 확인해주세요.
+    - path: "src/main/resources/**"
+      instructions: |
+        설정 파일입니다. 시크릿 값이 직접 노출되어 있는지 확인해주세요.
+
+# 챗봇 자동 응답 (PR 코멘트에 질문하면 자동으로 답변)
+chat:
+  auto_reply: true
