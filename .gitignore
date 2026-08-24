@@ -35,3 +35,36 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### macOS ###
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+### Windows ###
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+### 환경변수 / 시크릿 (절대 커밋 금지) ###
+.env
+.env.*
+application-local.yml
+application-local.yaml
+application-secret.yml
+application-secret.yaml
+*.pem
+*.key
+
+### 로그 ###
+*.log
+logs/
+
+### 기타 ###
+*.bak
+*.tmp
