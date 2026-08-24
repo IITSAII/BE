@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/photobooth
+    url: jdbc:postgresql://localhost:5544/photobooth
     username: photobooth
     password: photobooth
     driver-class-name: org.postgresql.Driver

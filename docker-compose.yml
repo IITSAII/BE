@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: photobooth
       POSTGRES_PASSWORD: photobooth
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5544:5432"
     volumes:
       - photobooth-postgres-data:/var/lib/postgresql/data
 
