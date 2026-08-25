@@ -1,0 +1,12 @@
+services:
+  app:
+    image: ${DOCKERHUB_USERNAME}/photobooth:latest
+    container_name: photobooth-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
