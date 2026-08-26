@@ -3,9 +3,13 @@ package com.iitsaii.photobooth.domain.session.service;
 import com.iitsaii.photobooth.global.error.CustomException;
 import com.iitsaii.photobooth.domain.session.dto.SessionCreateResponse;
 import com.iitsaii.photobooth.domain.session.dto.SessionStatusResponse;
+import com.iitsaii.photobooth.domain.session.entity.RelationshipType;
 import com.iitsaii.photobooth.domain.session.entity.Session;
+import com.iitsaii.photobooth.domain.session.entity.SessionStep;
 import com.iitsaii.photobooth.domain.session.error.SessionErrorCode;
 import com.iitsaii.photobooth.domain.session.repository.SessionRepository;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +27,12 @@ public class SessionService {
             4, 6000,
             6, 9000
     );
+
+    /**
+     * 촬영 단계(CAPTURE) 타임아웃. 컷당 10초 × 6컷 기준의 잠정치이며,
+     * 컷 사이 결과 확인 대기시간은 반영되어 있지 않다. photo 도메인 설계 확정 후 조정이 필요하다.
+     */
+    private static final Duration CAPTURE_STEP_TIMEOUT = Duration.ofSeconds(60);
 
     private final SessionRepository sessionRepository;
 
@@ -42,6 +52,17 @@ public class SessionService {
 
     public SessionStatusResponse getStatus(String sessionId) {
         Session session = findBySessionId(sessionId);
+        return SessionStatusResponse.from(session);
+    }
+
+    @Transactional
+    public SessionStatusResponse chooseRelationship(String sessionId, RelationshipType relationshipType) {
+        Session session = findBySessionId(sessionId);
+        if (session.getCurrentStep() != SessionStep.RELATIONSHIP) {
+            throw new CustomException(SessionErrorCode.INVALID_STEP);
+        }
+
+        session.chooseRelationship(relationshipType, LocalDateTime.now().plus(CAPTURE_STEP_TIMEOUT));
         return SessionStatusResponse.from(session);
     }
 
