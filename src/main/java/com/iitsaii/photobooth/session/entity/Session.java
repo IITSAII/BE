@@ -72,13 +72,27 @@ public class Session {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /** 수량 선택(1단계)은 이미 완료된 상태로 호출되므로, 생성 직후 다음 단계인 결제로 진입한다. */
     public static Session of(String sessionId, Integer quantity, Integer amount) {
         Session session = new Session();
         session.sessionId = sessionId;
         session.quantity = quantity;
         session.amount = amount;
         session.status = SessionStatus.CREATED;
-        session.currentStep = SessionStep.QUANTITY;
+        session.currentStep = SessionStep.PAYMENT;
         return session;
+    }
+
+    public void advanceTo(SessionStep step, LocalDateTime stepExpiresAt) {
+        this.currentStep = step;
+        this.stepExpiresAt = stepExpiresAt;
+    }
+
+    public void markPaid() {
+        this.status = SessionStatus.PAID;
+    }
+
+    public void markExpired() {
+        this.status = SessionStatus.EXPIRED;
     }
 }
