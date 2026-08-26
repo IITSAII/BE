@@ -88,6 +88,12 @@ public class Session {
         this.stepExpiresAt = stepExpiresAt;
     }
 
+    /** RELATIONSHIP 단계 완료 처리. relationshipType이 null이면 "설정 안 함"으로 취급한다. */
+    public void chooseRelationship(RelationshipType relationshipType, LocalDateTime nextStepExpiresAt) {
+        this.relationshipType = relationshipType;
+        advanceTo(SessionStep.CAPTURE, nextStepExpiresAt);
+    }
+
     public void markPaid() {
         this.status = SessionStatus.PAID;
     }
