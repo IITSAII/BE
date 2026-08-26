@@ -42,17 +42,18 @@ docker compose -f docker-compose-local.yml up -d
 ```
 com.iitsaii.photobooth
 ├── global
-│   ├── config    
-│   ├── common    
-│   ├── error     
-│   └── entity   
-├── session      
-├── payment       
-├── photo        
-├── printjob     
-└── magazine      
+│   ├── config    # Swagger, JPA Auditing, 타임존 등 전역 설정
+│   ├── common    # 공통 응답 포맷(CommonResponse)
+│   ├── error     # 전역 에러 코드, 전역 예외 처리
+│   └── entity    # BaseEntity, BaseTimeEntity
+└── domain
+    ├── session   # 포토부스 세션 (controller/service/repository/entity/dto/error)
+    ├── payment   # 결제
+    ├── photo     # 촬영/선택 이미지
+    ├── printjob  # 인쇄 작업
+    └── magazine  # 제휴 업체 및 쿠폰
 ```
 
 각 도메인 패키지는 `controller` / `service` / `repository` / `entity` / `dto` 레이어로 구성되며,
-도메인 전용 에러 코드가 필요하면 해당 도메인 패키지 아래 `error`를 둔다 (예: `session.error.SessionErrorCode`).
+도메인 전용 에러 코드가 필요하면 해당 도메인 패키지 아래 `error`를 둔다 (예: `domain.session.error.SessionErrorCode`).
 
