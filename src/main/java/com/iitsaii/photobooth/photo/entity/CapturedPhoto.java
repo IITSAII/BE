@@ -38,4 +38,12 @@ public class CapturedPhoto {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    public static CapturedPhoto of(Long sessionId, Integer shotNumber, String imageUrl) {
+        CapturedPhoto capturedPhoto = new CapturedPhoto();
+        capturedPhoto.sessionId = sessionId;
+        capturedPhoto.shotNumber = shotNumber;
+        capturedPhoto.imageUrl = imageUrl;
+        return capturedPhoto;
+    }
 }

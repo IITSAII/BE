@@ -71,4 +71,14 @@ public class Session {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    public static Session of(String sessionId, Integer quantity, Integer amount) {
+        Session session = new Session();
+        session.sessionId = sessionId;
+        session.quantity = quantity;
+        session.amount = amount;
+        session.status = SessionStatus.CREATED;
+        session.currentStep = SessionStep.QUANTITY;
+        return session;
+    }
 }

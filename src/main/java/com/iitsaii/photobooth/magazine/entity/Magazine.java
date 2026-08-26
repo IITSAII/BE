@@ -56,4 +56,33 @@ public class Magazine {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    public static Magazine of(
+            String name,
+            String location,
+            String shortDescription,
+            String description,
+            String imageUrl,
+            String naverMapUrl,
+            String couponDescription
+    ) {
+        Magazine magazine = new Magazine();
+        magazine.name = name;
+        magazine.location = location;
+        magazine.shortDescription = shortDescription;
+        magazine.description = description;
+        magazine.imageUrl = imageUrl;
+        magazine.naverMapUrl = naverMapUrl;
+        magazine.couponDescription = couponDescription;
+        magazine.active = true;
+        return magazine;
+    }
+
+    public void assignNow() {
+        this.lastAssignedAt = LocalDateTime.now();
+    }
+
+    public void deactivate() {
+        this.active = false;
+    }
 }

@@ -53,4 +53,34 @@ public class PrintJob {
 
     @Column(name = "printed_at")
     private LocalDateTime printedAt;
+
+    public static PrintJob of(
+            Long sessionId,
+            String frameType,
+            boolean filterBw,
+            Integer filterBrightness,
+            String finalImageUrl
+    ) {
+        PrintJob printJob = new PrintJob();
+        printJob.sessionId = sessionId;
+        printJob.frameType = frameType;
+        printJob.filterBw = filterBw;
+        printJob.filterBrightness = filterBrightness;
+        printJob.finalImageUrl = finalImageUrl;
+        printJob.status = PrintJobStatus.QUEUED;
+        return printJob;
+    }
+
+    public void markPrinting() {
+        this.status = PrintJobStatus.PRINTING;
+    }
+
+    public void markDone() {
+        this.status = PrintJobStatus.DONE;
+        this.printedAt = LocalDateTime.now();
+    }
+
+    public void markFailed() {
+        this.status = PrintJobStatus.FAILED;
+    }
 }

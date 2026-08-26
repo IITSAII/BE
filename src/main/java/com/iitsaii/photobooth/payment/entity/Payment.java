@@ -42,4 +42,22 @@ public class Payment {
 
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
+
+    public static Payment of(Long sessionId, String paymentKey, String method) {
+        Payment payment = new Payment();
+        payment.sessionId = sessionId;
+        payment.paymentKey = paymentKey;
+        payment.method = method;
+        payment.status = PaymentStatus.READY;
+        return payment;
+    }
+
+    public void approve() {
+        this.status = PaymentStatus.DONE;
+        this.approvedAt = LocalDateTime.now();
+    }
+
+    public void cancel() {
+        this.status = PaymentStatus.CANCELED;
+    }
 }

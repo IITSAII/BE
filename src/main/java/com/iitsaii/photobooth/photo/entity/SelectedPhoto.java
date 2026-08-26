@@ -34,4 +34,11 @@ public class SelectedPhoto {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    public static SelectedPhoto of(Long capturedPhotoId, Integer selectOrder) {
+        SelectedPhoto selectedPhoto = new SelectedPhoto();
+        selectedPhoto.capturedPhotoId = capturedPhotoId;
+        selectedPhoto.selectOrder = selectOrder;
+        return selectedPhoto;
+    }
 }
