@@ -5,6 +5,7 @@ import com.iitsaii.photobooth.session.dto.SessionCreateRequest;
 import com.iitsaii.photobooth.session.dto.SessionCreateResponse;
 import com.iitsaii.photobooth.session.dto.SessionStatusResponse;
 import com.iitsaii.photobooth.session.service.SessionService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,7 +22,7 @@ public class SessionController {
     private final SessionService sessionService;
 
     @PostMapping
-    public CommonResponse<SessionCreateResponse> createSession(@RequestBody SessionCreateRequest request) {
+    public CommonResponse<SessionCreateResponse> createSession(@Valid @RequestBody SessionCreateRequest request) {
         return CommonResponse.ok(sessionService.createSession(request.quantity()));
     }
 
