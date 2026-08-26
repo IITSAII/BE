@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,13 +58,19 @@ public class SessionService {
 
     @Transactional
     public SessionStatusResponse chooseRelationship(String sessionId, RelationshipType relationshipType) {
-        Session session = findBySessionId(sessionId);
-        if (session.getCurrentStep() != SessionStep.RELATIONSHIP) {
-            throw new CustomException(SessionErrorCode.INVALID_STEP);
-        }
+        try {
+            Session session = findBySessionId(sessionId);
+            if (session.getCurrentStep() != SessionStep.RELATIONSHIP) {
+                throw new CustomException(SessionErrorCode.INVALID_STEP);
+            }
 
-        session.chooseRelationship(relationshipType, LocalDateTime.now().plus(CAPTURE_STEP_TIMEOUT));
-        return SessionStatusResponse.from(session);
+            session.chooseRelationship(relationshipType, LocalDateTime.now().plus(CAPTURE_STEP_TIMEOUT));
+            sessionRepository.flush();
+            return SessionStatusResponse.from(session);
+        } catch (OptimisticLockingFailureException e) {
+            // 동시 요청으로 같은 세션의 단계를 동시에 전이시키려 한 경우. 먼저 커밋된 요청만 반영한다.
+            throw new CustomException(SessionErrorCode.CONCURRENT_REQUEST);
+        }
     }
 
     private Session findBySessionId(String sessionId) {
