@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -72,6 +73,11 @@ public class Session {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /** 동시 요청으로 인한 단계 전이 덮어쓰기를 막기 위한 낙관적 락 버전 */
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     /** 수량 선택(1단계)은 이미 완료된 상태로 호출되므로, 생성 직후 다음 단계인 결제로 진입한다. */
     public static Session of(String sessionId, Integer quantity, Integer amount) {
         Session session = new Session();
@@ -86,6 +92,12 @@ public class Session {
     public void advanceTo(SessionStep step, LocalDateTime stepExpiresAt) {
         this.currentStep = step;
         this.stepExpiresAt = stepExpiresAt;
+    }
+
+    /** RELATIONSHIP 단계 완료 처리. relationshipType이 null이면 "설정 안 함"으로 취급한다. */
+    public void chooseRelationship(RelationshipType relationshipType, LocalDateTime nextStepExpiresAt) {
+        this.relationshipType = relationshipType;
+        advanceTo(SessionStep.CAPTURE, nextStepExpiresAt);
     }
 
     public void markPaid() {

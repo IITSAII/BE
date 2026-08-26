@@ -9,11 +9,13 @@ import static org.mockito.Mockito.verify;
 import com.iitsaii.photobooth.global.error.CustomException;
 import com.iitsaii.photobooth.domain.session.dto.SessionCreateResponse;
 import com.iitsaii.photobooth.domain.session.dto.SessionStatusResponse;
+import com.iitsaii.photobooth.domain.session.entity.RelationshipType;
 import com.iitsaii.photobooth.domain.session.entity.Session;
 import com.iitsaii.photobooth.domain.session.entity.SessionStatus;
 import com.iitsaii.photobooth.domain.session.entity.SessionStep;
 import com.iitsaii.photobooth.domain.session.error.SessionErrorCode;
 import com.iitsaii.photobooth.domain.session.repository.SessionRepository;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -88,6 +90,61 @@ class SessionServiceTest {
             given(sessionRepository.findBySessionId("sess_none")).willReturn(Optional.empty());
 
             assertThatThrownBy(() -> sessionService.getStatus("sess_none"))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(SessionErrorCode.SESSION_NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("chooseRelationship")
+    class ChooseRelationship {
+
+        @Test
+        @DisplayName("RELATIONSHIP 단계이면 관계를 저장하고 CAPTURE 단계로 전이한다")
+        void advancesToCaptureWhenInRelationshipStep() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            session.advanceTo(SessionStep.RELATIONSHIP, LocalDateTime.now());
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+
+            SessionStatusResponse response = sessionService.chooseRelationship("sess_abc123", RelationshipType.COUPLE);
+
+            assertThat(response.currentStep()).isEqualTo(SessionStep.CAPTURE.name());
+            assertThat(session.getRelationshipType()).isEqualTo(RelationshipType.COUPLE);
+            assertThat(session.getStepExpiresAt()).isAfter(LocalDateTime.now());
+        }
+
+        @Test
+        @DisplayName("relationshipType이 null이면 '설정 안 함'으로 저장한다")
+        void allowsNullRelationshipType() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            session.advanceTo(SessionStep.RELATIONSHIP, LocalDateTime.now());
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+
+            sessionService.chooseRelationship("sess_abc123", null);
+
+            assertThat(session.getRelationshipType()).isNull();
+            assertThat(session.getCurrentStep()).isEqualTo(SessionStep.CAPTURE);
+        }
+
+        @Test
+        @DisplayName("RELATIONSHIP 단계가 아니면 INVALID_STEP 예외를 던진다")
+        void throwsWhenNotInRelationshipStep() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+
+            assertThatThrownBy(() -> sessionService.chooseRelationship("sess_abc123", RelationshipType.FRIEND))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(SessionErrorCode.INVALID_STEP);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 세션이면 SESSION_NOT_FOUND 예외를 던진다")
+        void throwsWhenSessionNotFound() {
+            given(sessionRepository.findBySessionId("sess_none")).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> sessionService.chooseRelationship("sess_none", RelationshipType.FRIEND))
                     .isInstanceOf(CustomException.class)
                     .extracting(e -> ((CustomException) e).getErrorCode())
                     .isEqualTo(SessionErrorCode.SESSION_NOT_FOUND);

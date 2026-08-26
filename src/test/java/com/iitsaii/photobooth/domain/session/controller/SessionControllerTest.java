@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iitsaii.photobooth.global.error.CustomException;
 import com.iitsaii.photobooth.domain.session.dto.SessionCreateResponse;
 import com.iitsaii.photobooth.domain.session.dto.SessionStatusResponse;
+import com.iitsaii.photobooth.domain.session.entity.RelationshipType;
 import com.iitsaii.photobooth.domain.session.entity.SessionStatus;
 import com.iitsaii.photobooth.domain.session.entity.SessionStep;
 import com.iitsaii.photobooth.domain.session.error.SessionErrorCode;
@@ -97,6 +98,49 @@ class SessionControllerTest {
                 .andExpect(jsonPath("$.error.code").value(SessionErrorCode.SESSION_NOT_FOUND.getCode()));
     }
 
+    @Test
+    @DisplayName("POST /api/sessions/{sessionId}/relationship - 정상 요청이면 200과 다음 단계 상태를 반환한다")
+    void chooseRelationship_success() throws Exception {
+        given(sessionService.chooseRelationship("sess_abc123", RelationshipType.COUPLE))
+                .willReturn(new SessionStatusResponse(
+                        "sess_abc123", SessionStatus.PAID.name(), SessionStep.CAPTURE.name(), null));
+
+        mockMvc.perform(post("/api/sessions/{sessionId}/relationship", "sess_abc123")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RelationshipRequest(RelationshipType.COUPLE))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.currentStep").value("CAPTURE"));
+    }
+
+    @Test
+    @DisplayName("POST /api/sessions/{sessionId}/relationship - RELATIONSHIP 단계가 아니면 400을 반환한다")
+    void chooseRelationship_invalidStep() throws Exception {
+        given(sessionService.chooseRelationship("sess_abc123", RelationshipType.COUPLE))
+                .willThrow(new CustomException(SessionErrorCode.INVALID_STEP));
+
+        mockMvc.perform(post("/api/sessions/{sessionId}/relationship", "sess_abc123")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RelationshipRequest(RelationshipType.COUPLE))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value(SessionErrorCode.INVALID_STEP.getCode()));
+    }
+
+    @Test
+    @DisplayName("POST /api/sessions/{sessionId}/relationship - 존재하지 않는 세션이면 404를 반환한다")
+    void chooseRelationship_notFound() throws Exception {
+        given(sessionService.chooseRelationship("sess_none", RelationshipType.COUPLE))
+                .willThrow(new CustomException(SessionErrorCode.SESSION_NOT_FOUND));
+
+        mockMvc.perform(post("/api/sessions/{sessionId}/relationship", "sess_none")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RelationshipRequest(RelationshipType.COUPLE))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value(SessionErrorCode.SESSION_NOT_FOUND.getCode()));
+    }
+
     private record QuantityRequest(Integer quantity) {
+    }
+
+    private record RelationshipRequest(RelationshipType relationshipType) {
     }
 }
