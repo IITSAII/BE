@@ -3,6 +3,7 @@ package com.iitsaii.photobooth.domain.session.controller;
 import com.iitsaii.photobooth.global.common.CommonResponse;
 import com.iitsaii.photobooth.domain.session.dto.SessionCreateRequest;
 import com.iitsaii.photobooth.domain.session.dto.SessionCreateResponse;
+import com.iitsaii.photobooth.domain.session.dto.SessionRelationshipRequest;
 import com.iitsaii.photobooth.domain.session.dto.SessionStatusResponse;
 import com.iitsaii.photobooth.domain.session.service.SessionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -65,5 +66,29 @@ public class SessionController {
             @PathVariable String sessionId
     ) {
         return CommonResponse.ok(sessionService.getStatus(sessionId));
+    }
+
+    @Operation(
+            summary = "관계 선택",
+            description = """
+                    2단계(오늘의 관계 선택) 완료 시 호출한다. 결제 완료 후 진입하는 RELATIONSHIP 단계에서만
+                    호출할 수 있다.
+                    - `relationshipType`을 생략하거나 null로 보내면 "설정 안 함"으로 저장된다.
+                    - 성공 시 CAPTURE 단계로 전이되고, 촬영 타임아웃이 새로 설정된다.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "관계 선택 성공"),
+            @ApiResponse(responseCode = "400", description = "RELATIONSHIP 단계가 아닐 때 호출 " +
+                    "(`SessionErrorCode.INVALID_STEP`)"),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 (`SessionErrorCode.SESSION_NOT_FOUND`)"),
+    })
+    @PostMapping("/{sessionId}/relationship")
+    public CommonResponse<SessionStatusResponse> chooseRelationship(
+            @Parameter(description = "세션의 공개 식별자", example = "sess_18f65b95c4fb")
+            @PathVariable String sessionId,
+            @RequestBody SessionRelationshipRequest request
+    ) {
+        return CommonResponse.ok(sessionService.chooseRelationship(sessionId, request.relationshipType()));
     }
 }
