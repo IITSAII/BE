@@ -14,7 +14,10 @@ RUN ./gradlew bootJar --no-daemon
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 
+RUN addgroup --system spring && adduser --system --ingroup spring spring
 COPY --from=build /app/build/libs/*.jar app.jar
+RUN chown spring:spring app.jar
+USER spring
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
