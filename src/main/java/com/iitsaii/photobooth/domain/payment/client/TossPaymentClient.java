@@ -15,6 +15,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 /** 토스페이먼츠 결제 승인 API 연동 클라이언트. */
@@ -71,6 +72,8 @@ public class TossPaymentClient {
      * orderId로 결제를 조회해서 실제로 승인(DONE)됐는지 확인한다.
      * 승인 요청이 타임아웃/5xx로 실패했을 때, "토스는 처리했는데 응답만 못 받은" 상황인지
      * 재확인하는 용도로 사용한다. 승인된 적이 없거나(404) 아직 DONE이 아니면 빈 값을 반환한다.
+     * 이 재조회 자체가 실패(타임아웃, 연결 불가 등 {@link RestClientException})해도 예외를 전파하지 않고
+     * 빈 값을 반환한다 - 호출부가 원래 예외로 폴백할 수 있도록 한다.
      */
     public Optional<TossConfirmResponse> findApprovedByOrderId(String orderId) {
         try {
@@ -81,7 +84,7 @@ public class TossPaymentClient {
             return (response != null && APPROVED_STATUS.equals(response.status()))
                     ? Optional.of(response)
                     : Optional.empty();
-        } catch (RestClientResponseException e) {
+        } catch (RestClientException e) {
             return Optional.empty();
         }
     }
