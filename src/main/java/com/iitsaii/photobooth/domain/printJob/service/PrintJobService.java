@@ -15,18 +15,26 @@ import com.iitsaii.photobooth.domain.session.repository.SessionRepository;
 import com.iitsaii.photobooth.global.error.CustomException;
 import com.iitsaii.photobooth.global.s3.S3Service;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class PrintJobService {
 
     private static final Duration PRINT_STEP_TIMEOUT = Duration.ofSeconds(100);
+
+    private static final List<String> ALLOWED_IMAGE_TYPES = List.of("image/jpeg", "image/png", "image/webp");
 
     private final SessionRepository sessionRepository;
     private final PrintJobRepository printJobRepository;
@@ -40,12 +48,13 @@ public class PrintJobService {
             throw new CustomException(PrintJobErrorCode.INVALID_FRAME_STEP);
         }
 
-        if (printJobRepository.existsBySession(session)) {
+        PrintJob printJob = PrintJob.of(session, dto.frameType(), dto.filterBw(), dto.filterBrightness());
+
+        try {
+            printJobRepository.saveAndFlush(printJob);
+        } catch (DataIntegrityViolationException e) {
             throw new CustomException(PrintJobErrorCode.FRAME_ALREADY_SELECTED);
         }
-
-        PrintJob printJob = PrintJob.of(session, dto.frameType(), dto.filterBw(), dto.filterBrightness());
-        printJobRepository.save(printJob);
 
         return PrintJobConverter.toFrameSelect(printJob);
     }
@@ -62,6 +71,20 @@ public class PrintJobService {
 
         if (finalImage == null || finalImage.isEmpty()) {
             throw new CustomException(PhotoErrorCode.EMPTY_IMAGE);
+        }
+
+        if (!ALLOWED_IMAGE_TYPES.contains(finalImage.getContentType())) {
+            throw new CustomException(PrintJobErrorCode.INVALID_IMAGE_FILE);
+        }
+
+        try (InputStream inputStream = finalImage.getInputStream()) {
+            BufferedImage image = ImageIO.read(inputStream);
+
+            if (image == null) {
+                throw new CustomException(PrintJobErrorCode.INVALID_IMAGE_FILE);
+            }
+        } catch (IOException e) {
+            throw new CustomException(PrintJobErrorCode.INVALID_IMAGE_FILE);
         }
 
         String imageUrl = s3Service.uploadFinalImage(finalImage, session.getSessionId());
@@ -100,6 +123,10 @@ public class PrintJobService {
             throw new CustomException(PrintJobErrorCode.FINAL_IMAGE_NOT_READY);
         }
 
+        if (printJob.getStatus() != PrintJobStatus.PRINTING) {
+            throw new CustomException(PrintJobErrorCode.INVALID_PRINT_STATUS);
+        }
+
         printJob.markDone();
         session.advanceTo(SessionStep.DONE, null);
     }
@@ -118,12 +145,18 @@ public class PrintJobService {
             throw new CustomException(PrintJobErrorCode.FINAL_IMAGE_NOT_READY);
         }
 
+        if (printJob.getStatus() != PrintJobStatus.PRINTING) {
+            throw new CustomException(PrintJobErrorCode.INVALID_PRINT_STATUS);
+        }
+
         printJob.markFailed();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PrintJobResDTO.PrintQueue getPrintQueue() {
-        PrintJob printJob = printJobRepository.findFirstByStatusOrderByCreatedAtAsc(PrintJobStatus.QUEUED).orElseThrow(() -> new CustomException(PrintJobErrorCode.NO_PRINT_JOB_IN_QUEUE));
+        PrintJob printJob = printJobRepository.findFirstQueuedForUpdate(PrintJobStatus.QUEUED).orElseThrow(() -> new CustomException(PrintJobErrorCode.NO_PRINT_JOB_IN_QUEUE));
+
+        printJob.markPrinting();
 
         return PrintJobConverter.toPrintQueue(printJob);
     }

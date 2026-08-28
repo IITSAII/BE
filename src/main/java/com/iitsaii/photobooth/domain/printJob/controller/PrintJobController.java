@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/sessions/{sessionId}/print")
+@RequestMapping("/api/sessions")
 public class PrintJobController {
 
     private final PrintJobService printJobService;
@@ -25,8 +25,8 @@ public class PrintJobController {
             description = """
                     사진 4장 선택 완료 후 호출한다.
                     - FRAME 단계에서만 호출 가능하다.
-                    - 선택한 프레임으로 PrintJob을 생성한다.
-                    - 성공하면 세션이 PRINT 단계로 이동한다.
+                    - 선택한 프레임과 필터 정보로 PrintJob을 생성한다.
+                    - 세션은 여전히 FRAME 단계이며, 최종 이미지 업로드 후 PRINT 단계로 이동한다.
                     """
     )
     @ApiResponses({
@@ -34,7 +34,7 @@ public class PrintJobController {
             @ApiResponse(responseCode = "400", description = "FRAME 단계가 아닐 때 (`PrintJobErrorCode.INVALID_FRAME_STEP`)"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 (`SessionErrorCode.SESSION_NOT_FOUND`)")
     })
-    @PostMapping("/frame")
+    @PostMapping("/{sessionId}/print/frame")
     public CommonResponse<PrintJobResDTO.FrameSelect> selectFrame(
             @Parameter(description = "세션의 공개 식별자")
             @PathVariable String sessionId,
@@ -57,7 +57,7 @@ public class PrintJobController {
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업")
     })
     @PostMapping(
-            value = "/final-image",
+            value = "/{sessionId}/print/final-image",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     public CommonResponse<PrintJobResDTO.UploadFinalImage> uploadFinalImage(
@@ -81,7 +81,7 @@ public class PrintJobController {
             @ApiResponse(responseCode = "400", description = "최종 인쇄 이미지가 아직 생성되지 않음 (`PrintJobErrorCode.FINAL_IMAGE_NOT_READY`)"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)")
     })
-    @GetMapping
+    @GetMapping("/{sessionId}/print")
     public CommonResponse<PrintJobResDTO.PrintInfo> getPrintInfo(
             @Parameter(description = "세션의 공개 식별자")
             @PathVariable String sessionId
@@ -103,7 +103,7 @@ public class PrintJobController {
             @ApiResponse(responseCode = "400", description = "이미 완료된 인쇄 작업 (`PrintJobErrorCode.PRINT_ALREADY_DONE`)"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)")
     })
-    @PatchMapping("/done")
+    @PatchMapping("/{sessionId}/print/done")
     public CommonResponse<Void> completePrint(
             @Parameter(description = "세션의 공개 식별자")
             @PathVariable String sessionId
@@ -125,7 +125,7 @@ public class PrintJobController {
             @ApiResponse(responseCode = "400", description = "이미 완료된 인쇄 작업 (`PrintJobErrorCode.PRINT_ALREADY_DONE`)"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)")
     })
-    @PatchMapping("/failed")
+    @PatchMapping("/{sessionId}/print/failed")
     public CommonResponse<Void> failPrint(
             @Parameter(description = "세션의 공개 식별자")
             @PathVariable String sessionId

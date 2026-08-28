@@ -2,6 +2,8 @@ package com.iitsaii.photobooth.domain.printJob.dto;
 
 import com.iitsaii.photobooth.domain.printJob.entity.FrameType;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,6 +23,8 @@ public class PrintJobReqDTO {
             boolean filterBw,
 
             @Schema(description = "밝기 조절 값 (-100 ~ 100)", example = "75")
+            @Min(-100)
+            @Max(100)
             Integer filterBrightness
     ) {}
 

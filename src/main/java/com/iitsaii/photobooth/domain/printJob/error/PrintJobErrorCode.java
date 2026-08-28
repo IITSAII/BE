@@ -44,6 +44,16 @@ public enum PrintJobErrorCode implements ErrorCode {
             "PRINT400_6",
             "이미 인쇄가 완료된 작업입니다."
     ),
+    INVALID_IMAGE_FILE(
+            HttpStatus.BAD_REQUEST,
+            "PRINT400_7",
+            "올바른 이미지 파일만 업로드할 수 있습니다."
+    ),
+    INVALID_PRINT_STATUS(
+            HttpStatus.BAD_REQUEST,
+            "PRINT400_8",
+            "현재 인쇄 작업 상태에서는 요청을 처리할 수 없습니다."
+    ),
     NO_PRINT_JOB_IN_QUEUE(
             HttpStatus.NO_CONTENT,
             "PRINT404_2",

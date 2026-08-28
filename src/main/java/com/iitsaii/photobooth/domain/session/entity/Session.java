@@ -1,5 +1,6 @@
 package com.iitsaii.photobooth.domain.session.entity;
 
+import com.iitsaii.photobooth.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -24,7 +25,7 @@ import org.hibernate.annotations.CreationTimestamp;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "sessions")
-public class Session {
+public class Session extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

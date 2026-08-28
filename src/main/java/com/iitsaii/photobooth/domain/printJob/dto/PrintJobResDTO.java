@@ -29,7 +29,7 @@ public class PrintJobResDTO {
     @Schema(description = "최종 인쇄 이미지 조회 응답")
     public record PrintInfo(
 
-            @Schema(description = "최종 4컷 인쇄 이미지 URL", example = "ttps://iitsaii-photobooth-images.s3.ap-northeast-2.amazonaws.com/prints/sess_xxx/final.jpg")
+            @Schema(description = "최종 4컷 인쇄 이미지 URL", example = "https://iitsaii-photobooth-images.s3.ap-northeast-2.amazonaws.com/prints/sess_xxx/final.jpg")
             String finalImageUrl,
 
             @Schema(description = "선택한 프레임 종류", example = "DARK")
@@ -46,12 +46,13 @@ public class PrintJobResDTO {
     ) {}
 
     @Builder
+    @Schema(description = "인쇄 대기 작업 조회 응답")
     public record PrintQueue(
 
             @Schema(description = "세션 ID")
             String sessionId,
 
-            @Schema(description = "최종 4컷 인쇄 이미지 URL", example = "ttps://iitsaii-photobooth-images.s3.ap-northeast-2.amazonaws.com/prints/sess_xxx/final.jpg")
+            @Schema(description = "최종 4컷 인쇄 이미지 URL", example = "https://iitsaii-photobooth-images.s3.ap-northeast-2.amazonaws.com/prints/sess_xxx/final.jpg")
             String finalImageUrl,
 
             @Schema(description = "선택한 프레임 종류", example = "DARK")

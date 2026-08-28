@@ -1,6 +1,7 @@
 package com.iitsaii.photobooth.domain.printJob.entity;
 
 import com.iitsaii.photobooth.domain.session.entity.Session;
+import com.iitsaii.photobooth.global.entity.BaseEntity;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -13,8 +14,11 @@ import org.hibernate.annotations.CreationTimestamp;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "print_jobs")
-public class PrintJob {
+@Table(
+        name = "print_jobs",
+        uniqueConstraints = @UniqueConstraint(columnNames = "session_id")
+)
+public class PrintJob extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

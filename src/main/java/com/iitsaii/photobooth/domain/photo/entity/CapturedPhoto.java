@@ -1,6 +1,7 @@
 package com.iitsaii.photobooth.domain.photo.entity;
 
 import com.iitsaii.photobooth.domain.session.entity.Session;
+import com.iitsaii.photobooth.global.entity.BaseEntity;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -22,7 +23,7 @@ import org.hibernate.annotations.CreationTimestamp;
                 )
         }
 )
-public class CapturedPhoto {
+public class CapturedPhoto extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

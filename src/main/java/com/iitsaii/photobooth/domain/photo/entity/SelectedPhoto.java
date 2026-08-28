@@ -1,5 +1,6 @@
 package com.iitsaii.photobooth.domain.photo.entity;
 
+import com.iitsaii.photobooth.global.entity.BaseEntity;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -13,7 +14,7 @@ import org.hibernate.annotations.CreationTimestamp;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "selected_photos")
-public class SelectedPhoto {
+public class SelectedPhoto extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,5 +1,6 @@
 package com.iitsaii.photobooth.domain.magazine.entity;
 
+import com.iitsaii.photobooth.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -17,7 +18,7 @@ import org.hibernate.annotations.CreationTimestamp;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "magazines")
-public class Magazine {
+public class Magazine extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
