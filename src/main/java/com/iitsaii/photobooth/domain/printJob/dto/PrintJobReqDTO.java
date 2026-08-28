@@ -23,6 +23,7 @@ public class PrintJobReqDTO {
             boolean filterBw,
 
             @Schema(description = "밝기 조절 값 (-100 ~ 100)", example = "75")
+            @NotNull(message = "밝기 값은 필수입니다.")
             @Min(-100)
             @Max(100)
             Integer filterBrightness

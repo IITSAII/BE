@@ -34,7 +34,7 @@ public class PrintJobService {
 
     private static final Duration PRINT_STEP_TIMEOUT = Duration.ofSeconds(100);
 
-    private static final List<String> ALLOWED_IMAGE_TYPES = List.of("image/jpeg", "image/png", "image/webp");
+    private static final List<String> ALLOWED_IMAGE_TYPES = List.of("image/jpeg", "image/png");
 
     private final SessionRepository sessionRepository;
     private final PrintJobRepository printJobRepository;

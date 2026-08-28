@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/sessions")
+@RequestMapping("/api/sessions/{sessionId}/print")
 public class PrintJobController {
 
     private final PrintJobService printJobService;
@@ -34,7 +34,7 @@ public class PrintJobController {
             @ApiResponse(responseCode = "400", description = "FRAME 단계가 아닐 때 (`PrintJobErrorCode.INVALID_FRAME_STEP`)"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 (`SessionErrorCode.SESSION_NOT_FOUND`)")
     })
-    @PostMapping("/{sessionId}/print/frame")
+    @PostMapping("/frame")
     public CommonResponse<PrintJobResDTO.FrameSelect> selectFrame(
             @Parameter(description = "세션의 공개 식별자")
             @PathVariable String sessionId,
@@ -46,7 +46,7 @@ public class PrintJobController {
     @Operation(
             summary = "최종 인쇄 이미지 업로드",
             description = """
-                    프론트가 프레임, 흑백, 밝기를 적용해 생성한 최종 4컷 이미지를 업로드한다.
+                    프론트가 프레임, 흑백, 밝기를 적용해 생성한 JPEG 또는 PNG 형식의 최종 4컷 이미지를 업로드한다.
                     - FRAME 선택 이후 생성된 PrintJob에 최종 이미지 URL을 저장한다.
                     - 업로드가 완료되면 인쇄 에이전트가 사용할 finalImageUrl이 생성된다.
                     """
@@ -57,7 +57,7 @@ public class PrintJobController {
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업")
     })
     @PostMapping(
-            value = "/{sessionId}/print/final-image",
+            value = "/final-image",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     public CommonResponse<PrintJobResDTO.UploadFinalImage> uploadFinalImage(
@@ -81,7 +81,7 @@ public class PrintJobController {
             @ApiResponse(responseCode = "400", description = "최종 인쇄 이미지가 아직 생성되지 않음 (`PrintJobErrorCode.FINAL_IMAGE_NOT_READY`)"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)")
     })
-    @GetMapping("/{sessionId}/print")
+    @GetMapping
     public CommonResponse<PrintJobResDTO.PrintInfo> getPrintInfo(
             @Parameter(description = "세션의 공개 식별자")
             @PathVariable String sessionId
@@ -103,7 +103,7 @@ public class PrintJobController {
             @ApiResponse(responseCode = "400", description = "이미 완료된 인쇄 작업 (`PrintJobErrorCode.PRINT_ALREADY_DONE`)"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)")
     })
-    @PatchMapping("/{sessionId}/print/done")
+    @PatchMapping("/done")
     public CommonResponse<Void> completePrint(
             @Parameter(description = "세션의 공개 식별자")
             @PathVariable String sessionId
@@ -125,29 +125,12 @@ public class PrintJobController {
             @ApiResponse(responseCode = "400", description = "이미 완료된 인쇄 작업 (`PrintJobErrorCode.PRINT_ALREADY_DONE`)"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)")
     })
-    @PatchMapping("/{sessionId}/print/failed")
+    @PatchMapping("/failed")
     public CommonResponse<Void> failPrint(
             @Parameter(description = "세션의 공개 식별자")
             @PathVariable String sessionId
     ) {
         printJobService.failPrint(sessionId);
         return CommonResponse.ok();
-    }
-
-    @Operation(
-            summary = "인쇄 대기 작업 조회",
-            description = """
-                맥북 프린트 에이전트가 출력 대기 중인 인쇄 작업을 조회한다.
-                - 가장 먼저 생성된 QUEUED 상태의 인쇄 작업 1건을 반환한다.
-                - 반환된 최종 이미지 URL을 사용해 프린터에서 인쇄를 진행한다.
-                """
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "인쇄 대기 작업 조회 성공"),
-            @ApiResponse(responseCode = "404", description = "인쇄 대기 작업 없음")
-    })
-    @GetMapping("/queue")
-    public CommonResponse<PrintJobResDTO.PrintQueue> getPrintQueue() {
-        return CommonResponse.ok(printJobService.getPrintQueue());
     }
 }
