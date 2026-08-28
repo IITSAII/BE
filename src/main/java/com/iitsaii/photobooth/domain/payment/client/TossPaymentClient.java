@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -25,6 +26,7 @@ public class TossPaymentClient {
     private static final String CONFIRM_URL = "https://api.tosspayments.com/v1/payments/confirm";
     private static final String ORDER_QUERY_URL = "https://api.tosspayments.com/v1/payments/orders/{orderId}";
     private static final String APPROVED_STATUS = "DONE";
+    private static final String IDEMPOTENCY_KEY_HEADER = "Idempotency-Key";
 
     /** 토스 서버가 응답을 안 주는 상황에서 요청 스레드가 무한정 블로킹되지 않도록 명시적으로 설정한다. */
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(3);
@@ -32,7 +34,17 @@ public class TossPaymentClient {
 
     private final RestClient restClient;
 
+    @Autowired
     public TossPaymentClient(@Value("${toss.secret-key}") String secretKey) {
+        this(defaultBuilder(secretKey));
+    }
+
+    /** 테스트에서 {@code MockRestServiceServer}를 붙일 수 있도록 builder를 직접 주입받는 패키지 전용 생성자. */
+    TossPaymentClient(RestClient.Builder builder) {
+        this.restClient = builder.build();
+    }
+
+    private static RestClient.Builder defaultBuilder(String secretKey) {
         String encodedAuth = Base64.getEncoder()
                 .encodeToString((secretKey + ":").getBytes(StandardCharsets.UTF_8));
 
@@ -40,10 +52,9 @@ public class TossPaymentClient {
                 HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build());
         requestFactory.setReadTimeout(READ_TIMEOUT);
 
-        this.restClient = RestClient.builder()
+        return RestClient.builder()
                 .requestFactory(requestFactory)
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Basic " + encodedAuth)
-                .build();
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Basic " + encodedAuth);
     }
 
     /**
@@ -52,11 +63,16 @@ public class TossPaymentClient {
      * 5xx로 응답하면(토스 쪽 장애) {@link PaymentErrorCode#PAYMENT_GATEWAY_UNAVAILABLE}(502)로 구분해서 변환한다.
      * 네트워크 자체가 실패(타임아웃, 연결 불가 등)하면 이 메서드에서 잡지 않고 그대로 전파한다
      * (GlobalExceptionHandler의 500 처리로 넘어가며, 우리 쪽 요청 문제가 아니므로 400/502로 감추지 않는다).
+     *
+     * orderId(=sessionId)를 Idempotency-Key로 함께 보내서, 응답 유실 등으로 우리 쪽에서 같은 요청을
+     * 재시도하더라도 토스 쪽에서 중복 승인이 발생하지 않도록 한다. 세션당 결제 승인은 항상 1회만
+     * 일어나므로 별도 키 발급 없이 orderId를 그대로 재사용한다.
      */
     public TossConfirmResponse confirm(TossConfirmRequest request) {
         try {
             return restClient.post()
                     .uri(CONFIRM_URL)
+                    .header(IDEMPOTENCY_KEY_HEADER, request.orderId())
                     .body(request)
                     .retrieve()
                     .body(TossConfirmResponse.class);
