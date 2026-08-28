@@ -17,11 +17,13 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -68,6 +70,13 @@ public class PaymentService {
 
         TossConfirmResponse response = confirmWithReconciliation(sessionId, paymentKey, amount);
 
+        // status가 DONE이 아니면 승인 완료로 취급하지 않는다.
+        // 가상계좌는 입금 전까지 WAITING_FOR_DEPOSIT으로 응답하며(approvedAt=null), 이 서비스는
+        // 즉시 확정 결제(카드/간편결제 등)만 지원하므로 DONE이 아닌 응답은 실패로 처리한다.
+        if (!"DONE".equals(response.status())) {
+            throw new CustomException(PaymentErrorCode.PAYMENT_CONFIRM_FAILED,
+                    "토스 결제가 아직 완료되지 않았습니다. status=" + response.status());
+        }
         if (response.approvedAt() == null) {
             // 토스 문서상 approvedAt은 nullable이지만, 승인 성공(status=DONE) 응답이라면 항상 채워져야 한다.
             // 여기 걸리면 토스 쪽 응답 이상이므로 방어적으로 막는다.
@@ -93,7 +102,18 @@ public class PaymentService {
             throw new CustomException(SessionErrorCode.CONCURRENT_REQUEST);
         }
 
-        session.completePayment(LocalDateTime.now().plus(RELATIONSHIP_STEP_TIMEOUT));
+        // 토스 승인 왕복(타임아웃/재조회 포함, 최대 수십 초) 동안 세션이 만료됐을 수 있다.
+        // 이 시점엔 이미 Toss가 결제를 승인했고 Payment도 저장했으므로, 세션 진행은 막되
+        // 결제 기록은 롤백하지 않는다 - 환불 여부는 운영팀이 이 로그를 보고 수동으로 판단한다.
+        LocalDateTime now = LocalDateTime.now();
+        session.expireIfPaymentTimedOut(now);
+        if (session.getStatus() == SessionStatus.EXPIRED) {
+            log.warn("결제는 승인됐지만 세션이 만료되어 다음 단계로 진행하지 않습니다. "
+                    + "수동 환불 검토 필요. sessionId={}, paymentKey={}", sessionId, response.paymentKey());
+            return SessionStatusResponse.from(session);
+        }
+
+        session.completePayment(now.plus(RELATIONSHIP_STEP_TIMEOUT));
 
         return SessionStatusResponse.from(session);
     }
