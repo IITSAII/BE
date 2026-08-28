@@ -58,5 +58,6 @@ class TossPaymentClientTest {
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(PaymentErrorCode.PAYMENT_GATEWAY_UNAVAILABLE);
+        mockServer.verify();
     }
 }
