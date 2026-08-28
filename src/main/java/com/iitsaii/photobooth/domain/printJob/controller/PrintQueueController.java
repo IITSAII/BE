@@ -28,7 +28,7 @@ public class PrintQueueController {
             @ApiResponse(responseCode = "200", description = "인쇄 대기 작업 조회 성공"),
             @ApiResponse(responseCode = "404", description = "인쇄 대기 작업 없음")
     })
-    @GetMapping("/queue")
+    @GetMapping("/api/print/queue")
     public CommonResponse<PrintJobResDTO.PrintQueue> getPrintQueue() {
         return CommonResponse.ok(printJobService.getPrintQueue());
     }
