@@ -21,12 +21,5 @@ public interface PrintJobRepository extends JpaRepository<PrintJob, Long> {
     Optional<PrintJob> findBySessionForUpdate(@Param("session") Session session);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("""
-        SELECT p
-        FROM PrintJob p
-        WHERE p.status = :status
-            AND p.finalImageUrl IS NOT NULL
-        ORDER BY p.createdAt ASC
-    """)
-    Optional<PrintJob> findFirstQueuedForUpdate(@Param("status") PrintJobStatus status);
+    Optional<PrintJob> findFirstByStatusAndFinalImageUrlIsNotNullOrderByCreatedAtAsc(PrintJobStatus status);
 }

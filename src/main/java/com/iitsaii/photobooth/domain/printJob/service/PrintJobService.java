@@ -154,7 +154,7 @@ public class PrintJobService {
 
     @Transactional
     public PrintJobResDTO.PrintQueue getPrintQueue() {
-        PrintJob printJob = printJobRepository.findFirstQueuedForUpdate(PrintJobStatus.QUEUED).orElseThrow(() -> new CustomException(PrintJobErrorCode.NO_PRINT_JOB_IN_QUEUE));
+        PrintJob printJob = printJobRepository.findFirstByStatusAndFinalImageUrlIsNotNullOrderByCreatedAtAsc(PrintJobStatus.QUEUED).orElseThrow(() -> new CustomException(PrintJobErrorCode.NO_PRINT_JOB_IN_QUEUE));
 
         printJob.markPrinting();
 
