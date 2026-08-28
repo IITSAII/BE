@@ -1,6 +1,7 @@
 package com.iitsaii.photobooth.domain.photo.entity;
 
 import com.iitsaii.photobooth.domain.session.entity.Session;
+import com.iitsaii.photobooth.global.entity.BaseEntity;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -22,11 +23,7 @@ import org.hibernate.annotations.CreationTimestamp;
                 )
         }
 )
-public class CapturedPhoto {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class CapturedPhoto extends BaseEntity {
 
     /** 연결된 세션 (sessions.id 참조) */
     @ManyToOne(fetch = FetchType.LAZY)
@@ -40,10 +37,6 @@ public class CapturedPhoto {
     /** 원본 이미지 저장 경로 (S3) */
     @Column(name = "image_url", length = 500, nullable = false)
     private String imageUrl;
-
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
 
     public static CapturedPhoto of(Session session, Integer shotNumber, String imageUrl) {
         CapturedPhoto capturedPhoto = new CapturedPhoto();

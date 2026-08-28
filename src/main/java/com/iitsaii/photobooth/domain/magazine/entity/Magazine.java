@@ -1,5 +1,6 @@
 package com.iitsaii.photobooth.domain.magazine.entity;
 
+import com.iitsaii.photobooth.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -17,11 +18,7 @@ import org.hibernate.annotations.CreationTimestamp;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "magazines")
-public class Magazine {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Magazine extends BaseEntity {
 
     @Column(length = 100, nullable = false)
     private String name;
@@ -52,10 +49,6 @@ public class Magazine {
     /** 최근 당첨 시각. 랜덤 배정 시 최근 당첨 업체를 후순위로 미루는 데 사용 */
     @Column(name = "last_assigned_at")
     private LocalDateTime lastAssignedAt;
-
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
 
     public static Magazine of(
             String name,

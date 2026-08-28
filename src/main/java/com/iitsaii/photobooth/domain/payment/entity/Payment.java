@@ -1,5 +1,6 @@
 package com.iitsaii.photobooth.domain.payment.entity;
 
+import com.iitsaii.photobooth.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -18,11 +19,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "payments")
-public class Payment {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Payment extends BaseEntity {
 
     /** 연결된 세션 (sessions.id 참조) */
     @Column(name = "session_id", nullable = false)

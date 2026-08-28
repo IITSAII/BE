@@ -1,5 +1,6 @@
 package com.iitsaii.photobooth.domain.session.entity;
 
+import com.iitsaii.photobooth.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -24,11 +25,7 @@ import org.hibernate.annotations.CreationTimestamp;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "sessions")
-public class Session {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Session extends BaseEntity {
 
     /** 이번 회차에 랜덤 당첨된 제휴 업체 (magazines.id 참조) */
     @Column(name = "magazine_id")
@@ -68,10 +65,6 @@ public class Session {
 
     @Column(name = "coupon_expires_at")
     private LocalDateTime couponExpiresAt;
-
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
 
     /** 동시 요청으로 인한 단계 전이 덮어쓰기를 막기 위한 낙관적 락 버전 */
     @Version
