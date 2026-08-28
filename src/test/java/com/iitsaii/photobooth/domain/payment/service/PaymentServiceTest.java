@@ -63,7 +63,7 @@ class PaymentServiceTest {
             assertThat(response.status()).isEqualTo(SessionStatus.PAID.name());
             assertThat(response.currentStep()).isEqualTo(SessionStep.RELATIONSHIP.name());
             assertThat(session.getStepExpiresAt()).isNotNull();
-            verify(paymentRepository).save(any(Payment.class));
+            verify(paymentRepository).saveAndFlush(any(Payment.class));
         }
 
         @Test
@@ -106,7 +106,7 @@ class PaymentServiceTest {
                     .isEqualTo(PaymentErrorCode.AMOUNT_MISMATCH);
 
             verify(tossPaymentClient, never()).confirm(any());
-            verify(paymentRepository, never()).save(any());
+            verify(paymentRepository, never()).saveAndFlush(any());
         }
 
         @Test
@@ -123,7 +123,25 @@ class PaymentServiceTest {
                     .isEqualTo(PaymentErrorCode.PAYMENT_CONFIRM_FAILED);
 
             assertThat(session.getCurrentStep()).isEqualTo(SessionStep.PAYMENT);
-            verify(paymentRepository, never()).save(any());
+            verify(paymentRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        @DisplayName("이미 처리된 결제(orderId로 조회됨)면 재승인 없이 현재 세션 상태를 그대로 반환한다")
+        void returnsExistingResultWhenAlreadyConfirmed() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            session.completePayment(null);
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+            given(paymentRepository.findByOrderId("sess_abc123")).willReturn(Optional.of(
+                    Payment.approved(1L, "sess_abc123", "pay_key_1", "카드", java.time.LocalDateTime.now())
+            ));
+
+            SessionStatusResponse response = paymentService.confirm("sess_abc123", "pay_key_1", 6000);
+
+            assertThat(response.status()).isEqualTo(SessionStatus.PAID.name());
+            assertThat(response.currentStep()).isEqualTo(SessionStep.RELATIONSHIP.name());
+            verify(tossPaymentClient, never()).confirm(any());
+            verify(paymentRepository, never()).saveAndFlush(any());
         }
     }
 }

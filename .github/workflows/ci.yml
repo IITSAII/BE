@@ -42,5 +42,4 @@ jobs:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/photobooth
           SPRING_DATASOURCE_USERNAME: photobooth
           SPRING_DATASOURCE_PASSWORD: photobooth
-          TOSS_SECRET_KEY: test_dummy_key_for_ci_context_loading
         run: ./gradlew build
