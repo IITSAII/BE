@@ -8,3 +8,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+toss:
+  secret-key: ${TOSS_SECRET_KEY}

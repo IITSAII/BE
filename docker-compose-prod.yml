@@ -10,3 +10,4 @@ services:
       DB_URL: ${DB_URL:?DB_URL is required}
       DB_USERNAME: ${DB_USERNAME:?DB_USERNAME is required}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      TOSS_SECRET_KEY: ${TOSS_SECRET_KEY:?TOSS_SECRET_KEY is required}
