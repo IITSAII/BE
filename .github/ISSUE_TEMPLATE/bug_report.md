@@ -1,7 +1,7 @@
 ---
 name: 🐛 버그 리포트
 about: 버그를 발견하셨다면 알려주세요
-title: "[BUG] "
+title: "[fix] "
 labels: bug
 assignees: ''
 ---

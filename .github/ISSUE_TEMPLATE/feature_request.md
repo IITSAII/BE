@@ -1,7 +1,7 @@
 ---
 name: ✨ 기능 요청
 about: 새로운 기능이나 개선 아이디어를 제안해주세요
-title: "[FEATURE] "
+title: "[feat] "
 labels: enhancement
 assignees: ''
 ---

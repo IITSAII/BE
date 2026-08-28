@@ -54,8 +54,9 @@ $RECYCLE.BIN/
 ### 환경변수 / 시크릿 (절대 커밋 금지) ###
 .env
 .env.*
-application-local.yml
-application-local.yaml
+!.env.example
+application-local-secret.yml
+application-local-secret.yaml
 application-secret.yml
 application-secret.yaml
 *.pem

@@ -20,6 +20,8 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5'
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'org.postgresql:postgresql'
 	annotationProcessor 'org.projectlombok:lombok'
@@ -32,4 +34,14 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// 우선순위: -Dspring.profiles.active > SPRING_PROFILES_ACTIVE 환경변수 > local(기본값)
+	// CI(ci.yml)는 SPRING_PROFILES_ACTIVE=local과 함께 datasource를 env로 덮어써서 주입하므로 영향 없다.
+	systemProperty 'spring.profiles.active',
+			System.getProperty('spring.profiles.active', System.getenv('SPRING_PROFILES_ACTIVE') ?: 'local')
+}
+
+tasks.named('bootRun') {
+	// 우선순위: -Dspring.profiles.active > SPRING_PROFILES_ACTIVE 환경변수 > local(기본값)
+	systemProperty 'spring.profiles.active',
+			System.getProperty('spring.profiles.active', System.getenv('SPRING_PROFILES_ACTIVE') ?: 'local')
 }

@@ -1,0 +1,18 @@
+server:
+  forward-headers-strategy: framework
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      # TODO: 최초 배포로 스키마 부트스트랩 후 validate로 되돌릴 것
+      ddl-auto: create
+    show-sql: false
+
+logging:
+  level:
+    com.iitsaii.photobooth: info
