@@ -13,3 +13,12 @@ toss:
   # 토스 샌드박스(테스트) 시크릿 키. 실 계약 전이라 라이브 키가 없고, 테스트 키는 유출돼도 실거래에 영향 없어 기본값으로 둔다.
   # 프로덕션은 docker-compose-prod.yml에서 :?required로 강제하므로 이 기본값의 영향을 받지 않는다.
   secret-key: ${TOSS_SECRET_KEY:test_sk_eqRGgYO1r5MEz29RQzeWrQnN2Eya}
+
+cloud:
+  aws:
+    region: ${AWS_REGION}
+    credentials:
+      access-key: ${AWS_ACCESS_KEY}
+      secret-key: ${AWS_SECRET_KEY}
+    s3:
+      bucket: ${AWS_S3_BUCKET_NAME}
