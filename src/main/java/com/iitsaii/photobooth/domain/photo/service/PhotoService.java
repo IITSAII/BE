@@ -15,6 +15,7 @@ import com.iitsaii.photobooth.domain.session.repository.SessionRepository;
 import com.iitsaii.photobooth.global.error.CustomException;
 import com.iitsaii.photobooth.global.s3.S3Service;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -61,14 +62,16 @@ public class PhotoService {
             throw new CustomException(PhotoErrorCode.EMPTY_IMAGE);
         }
 
-        if (capturedPhotoRepository.existsBySessionAndShotNumber(session, shotNumber)) {
+        String imageUrl = s3Service.upload(image, session.getSessionId(), shotNumber);
+        CapturedPhoto capturedPhoto;
+
+        try {
+            capturedPhoto = CapturedPhoto.of(session, shotNumber, imageUrl);
+            capturedPhotoRepository.saveAndFlush(capturedPhoto);
+        } catch (DataIntegrityViolationException e) {
+            s3Service.delete(imageUrl);
             throw new CustomException(PhotoErrorCode.PHOTO_ALREADY_EXISTS);
         }
-
-        String imageUrl = s3Service.upload(image, session.getSessionId(), shotNumber);
-
-        CapturedPhoto capturedPhoto = CapturedPhoto.of(session, shotNumber, imageUrl);
-        capturedPhotoRepository.save(capturedPhoto);
 
         if (capturedPhotoRepository.countBySession(session) == MAX_SHOT_COUNT) {
             session.advanceTo(SessionStep.SELECT, LocalDateTime.now().plus(SELECT_STEP_TIMEOUT));

@@ -61,7 +61,7 @@ public enum PhotoErrorCode implements ErrorCode {
     ),
     EMPTY_IMAGE(
             HttpStatus.BAD_REQUEST,
-            "PHOTO400_4",
+            "PHOTO400_8",
             "업로드할 이미지가 없습니다."
     ),
     PHOTO_UPLOAD_FAILED(

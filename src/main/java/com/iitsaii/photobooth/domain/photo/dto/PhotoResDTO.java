@@ -53,7 +53,7 @@ public class PhotoResDTO {
     @Schema(description = "선택된 사진 정보")
     public record SelectedPhotoInfo(
 
-            @Schema(description = "사진 ID", example = "1")
+            @Schema(description = "선택된 사진 ID", example = "1")
             Long photoId,
 
             @Schema(description = "선택 순서", example = "2")

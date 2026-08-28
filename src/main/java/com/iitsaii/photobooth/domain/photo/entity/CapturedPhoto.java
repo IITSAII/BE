@@ -13,7 +13,15 @@ import org.hibernate.annotations.CreationTimestamp;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "captured_photos")
+@Table(
+        name = "captured_photos",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_session_shot",
+                        columnNames = {"session_id", "shot_number"}
+                )
+        }
+)
 public class CapturedPhoto {
 
     @Id
