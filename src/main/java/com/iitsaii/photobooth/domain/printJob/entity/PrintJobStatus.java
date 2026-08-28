@@ -1,4 +1,4 @@
-package com.iitsaii.photobooth.domain.printjob.entity;
+package com.iitsaii.photobooth.domain.printJob.entity;
 
 /** 인쇄 상태 */
 public enum PrintJobStatus {
