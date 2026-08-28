@@ -28,7 +28,7 @@ public class PhotoController {
                     - CAPTURE 단계에서만 호출할 수 있다.
                     - `shotNumber`는 몇 번째 컷인지 나타내며 1부터 시작한다.
                     - 업로드된 사진은 S3에 저장되고 세션에 연결된다.
-                    - 모든 사진이 업로드되면 서버가 다음 단계(SELECT_FRAME)로 진행한다.
+                    - 모든 사진이 업로드되면 서버가 다음 단계(SELECT)로 진행한다.
                     """
     )
     @ApiResponses({
@@ -71,13 +71,13 @@ public class PhotoController {
             summary = "사진 선택 완료",
             description = """
                     사진 4장 선택 완료 시 선택한 사진 정보를 저장한다.
-                    - SELECT_PHOTO 단계에서만 호출할 수 있다.
+                    - SELECT 단계에서만 호출할 수 있다.
                     - 선택한 사진 번호를 저장하고 다음 단계(FRAME)로 진행한다.
                     """
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "사진 선택 성공"),
-            @ApiResponse(responseCode = "400", description = "SELECT_PHOTO 단계가 아님 또는 잘못된 선택"),
+            @ApiResponse(responseCode = "400", description = "SELECT 단계가 아님 또는 잘못된 선택"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 (`SessionErrorCode.SESSION_NOT_FOUND`)")
     })
     @PostMapping("/photos/select")
