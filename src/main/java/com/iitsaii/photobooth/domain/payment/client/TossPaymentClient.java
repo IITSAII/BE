@@ -5,10 +5,13 @@ import com.iitsaii.photobooth.domain.payment.dto.TossConfirmResponse;
 import com.iitsaii.photobooth.domain.payment.dto.TossErrorResponse;
 import com.iitsaii.photobooth.domain.payment.error.PaymentErrorCode;
 import com.iitsaii.photobooth.global.error.CustomException;
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Base64;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -19,20 +22,32 @@ public class TossPaymentClient {
 
     private static final String CONFIRM_URL = "https://api.tosspayments.com/v1/payments/confirm";
 
+    /** 토스 서버가 응답을 안 주는 상황에서 요청 스레드가 무한정 블로킹되지 않도록 명시적으로 설정한다. */
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(3);
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(10);
+
     private final RestClient restClient;
 
     public TossPaymentClient(@Value("${toss.secret-key}") String secretKey) {
         String encodedAuth = Base64.getEncoder()
                 .encodeToString((secretKey + ":").getBytes(StandardCharsets.UTF_8));
 
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(
+                HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build());
+        requestFactory.setReadTimeout(READ_TIMEOUT);
+
         this.restClient = RestClient.builder()
+                .requestFactory(requestFactory)
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Basic " + encodedAuth)
                 .build();
     }
 
     /**
      * 결제 승인을 요청한다.
-     * 토스페이먼츠가 4xx/5xx로 응답하면 {@link PaymentErrorCode#PAYMENT_CONFIRM_FAILED}로 변환한다.
+     * 토스페이먼츠가 4xx로 응답하면 {@link PaymentErrorCode#PAYMENT_CONFIRM_FAILED}(400)로,
+     * 5xx로 응답하면(토스 쪽 장애) {@link PaymentErrorCode#PAYMENT_GATEWAY_UNAVAILABLE}(502)로 구분해서 변환한다.
+     * 네트워크 자체가 실패(타임아웃, 연결 불가 등)하면 이 메서드에서 잡지 않고 그대로 전파한다
+     * (GlobalExceptionHandler의 500 처리로 넘어가며, 우리 쪽 요청 문제가 아니므로 400/502로 감추지 않는다).
      */
     public TossConfirmResponse confirm(TossConfirmRequest request) {
         try {
@@ -42,7 +57,10 @@ public class TossPaymentClient {
                     .retrieve()
                     .body(TossConfirmResponse.class);
         } catch (RestClientResponseException e) {
-            throw new CustomException(PaymentErrorCode.PAYMENT_CONFIRM_FAILED, extractMessage(e));
+            PaymentErrorCode errorCode = e.getStatusCode().is5xxServerError()
+                    ? PaymentErrorCode.PAYMENT_GATEWAY_UNAVAILABLE
+                    : PaymentErrorCode.PAYMENT_CONFIRM_FAILED;
+            throw new CustomException(errorCode, extractMessage(e));
         }
     }
 

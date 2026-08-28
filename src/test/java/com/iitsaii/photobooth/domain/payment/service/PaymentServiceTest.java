@@ -67,6 +67,23 @@ class PaymentServiceTest {
         }
 
         @Test
+        @DisplayName("토스 응답에 approvedAt이 없으면 PAYMENT_CONFIRM_FAILED 예외를 던지고 저장하지 않는다")
+        void throwsWhenApprovedAtMissing() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+            given(tossPaymentClient.confirm(any())).willReturn(
+                    new TossConfirmResponse("pay_key_1", "sess_abc123", "DONE", "카드", null, 6000L)
+            );
+
+            assertThatThrownBy(() -> paymentService.confirm("sess_abc123", "pay_key_1", 6000))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(PaymentErrorCode.PAYMENT_CONFIRM_FAILED);
+
+            verify(paymentRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
         @DisplayName("동시 요청으로 저장이 충돌하면(orderId unique 위반) CONCURRENT_REQUEST 예외를 던진다")
         void throwsConcurrentRequestWhenSaveConflicts() {
             Session session = Session.of("sess_abc123", 4, 6000);

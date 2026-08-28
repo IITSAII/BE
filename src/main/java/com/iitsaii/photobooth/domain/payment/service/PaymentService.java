@@ -68,6 +68,13 @@ public class PaymentService {
         TossConfirmResponse response = tossPaymentClient.confirm(
                 new TossConfirmRequest(paymentKey, sessionId, amount.longValue()));
 
+        if (response.approvedAt() == null) {
+            // 토스 문서상 approvedAt은 nullable이지만, 승인 성공(status=DONE) 응답이라면 항상 채워져야 한다.
+            // 여기 걸리면 토스 쪽 응답 이상이므로 방어적으로 막는다.
+            throw new CustomException(PaymentErrorCode.PAYMENT_CONFIRM_FAILED,
+                    "토스 응답에 approvedAt이 없습니다.");
+        }
+
         Payment payment = Payment.approved(
                 session.getId(),
                 sessionId,
