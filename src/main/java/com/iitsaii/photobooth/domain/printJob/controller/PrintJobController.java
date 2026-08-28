@@ -21,20 +21,20 @@ public class PrintJobController {
     private final PrintJobService printJobService;
 
     @Operation(
-            summary = "인쇄 시작",
+            summary = "프레임 선택",
             description = """
-                    프레임 선택 화면에서 '다음' 버튼을 누르면 호출한다.
-                    - 프레임, 흑백 여부, 밝기를 저장한다.
-                    - 최종 인쇄 이미지를 생성한다.
-                    - PrintJob을 생성하고 PRINT 단계로 이동한다.
+                    사진 4장 선택 완료 후 호출한다.
+                    - FRAME 단계에서만 호출 가능하다.
+                    - 선택한 프레임으로 PrintJob을 생성한다.
+                    - 성공하면 세션이 PRINT 단계로 이동한다.
                     """
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "인쇄 시작 성공"),
-            @ApiResponse(responseCode = "400", description = "FRAME 단계가 아니거나 잘못된 밝기 값"),
+            @ApiResponse(responseCode = "400", description = "FRAME 단계가 아닐 때 (`PrintJobErrorCode.INVALID_FRAME_STEP`)"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 (`SessionErrorCode.SESSION_NOT_FOUND`)")
     })
-    @PostMapping
+    @PostMapping("/frame")
     public CommonResponse<PrintJobResDTO.FrameSelect> selectFrame(
             @Parameter(description = "세션의 공개 식별자")
             @PathVariable String sessionId,
@@ -89,4 +89,26 @@ public class PrintJobController {
         return CommonResponse.ok(printJobService.getPrintInfo(sessionId));
     }
 
+    @Operation(
+            summary = "인쇄 완료 처리",
+            description = """
+                    맥북 프린트 에이전트가 실제 인쇄를 완료한 뒤 호출한다.
+                    - 인쇄 작업 상태를 DONE으로 변경한다.
+                    - 인쇄 완료 시각(printedAt)을 저장한다.
+                    - 세션을 DONE 단계로 종료한다.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "인쇄 완료 처리 성공"),
+            @ApiResponse(responseCode = "400", description = "이미 완료된 인쇄 작업 (`PrintJobErrorCode.PRINT_ALREADY_DONE`)"),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)")
+    })
+    @PatchMapping("/done")
+    public CommonResponse<Void> completePrint(
+            @Parameter(description = "세션의 공개 식별자")
+            @PathVariable String sessionId
+    ) {
+        printJobService.completePrint(sessionId);
+        return CommonResponse.ok();
+    }
 }

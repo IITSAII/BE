@@ -5,6 +5,7 @@ import com.iitsaii.photobooth.domain.printJob.converter.PrintJobConverter;
 import com.iitsaii.photobooth.domain.printJob.dto.PrintJobReqDTO;
 import com.iitsaii.photobooth.domain.printJob.dto.PrintJobResDTO;
 import com.iitsaii.photobooth.domain.printJob.entity.PrintJob;
+import com.iitsaii.photobooth.domain.printJob.entity.PrintJobStatus;
 import com.iitsaii.photobooth.domain.printJob.error.PrintJobErrorCode;
 import com.iitsaii.photobooth.domain.printJob.repository.PrintJobRepository;
 import com.iitsaii.photobooth.domain.session.entity.Session;
@@ -83,5 +84,23 @@ public class PrintJobService {
         }
 
         return PrintJobConverter.toPrintInfo(printJob);
+    }
+
+    @Transactional
+    public void completePrint(String sessionId) {
+        Session session = sessionRepository.findBySessionId(sessionId).orElseThrow(() -> new CustomException(SessionErrorCode.SESSION_NOT_FOUND));
+
+        PrintJob printJob = printJobRepository.findBySession(session).orElseThrow(() -> new CustomException(PrintJobErrorCode.PRINT_JOB_NOT_FOUND));
+
+        if (printJob.getStatus() == PrintJobStatus.DONE) {
+            throw new CustomException(PrintJobErrorCode.PRINT_ALREADY_DONE);
+        }
+
+        if (printJob.getFinalImageUrl() == null) {
+            throw new CustomException(PrintJobErrorCode.FINAL_IMAGE_NOT_READY);
+        }
+
+        printJob.markDone();
+        session.advanceTo(SessionStep.DONE, null);
     }
 }
