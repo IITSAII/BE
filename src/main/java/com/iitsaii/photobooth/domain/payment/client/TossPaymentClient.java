@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -32,7 +33,17 @@ public class TossPaymentClient {
 
     private final RestClient restClient;
 
+    @Autowired
     public TossPaymentClient(@Value("${toss.secret-key}") String secretKey) {
+        this(defaultBuilder(secretKey));
+    }
+
+    /** 테스트에서 {@code MockRestServiceServer}를 붙일 수 있도록 builder를 직접 주입받는 패키지 전용 생성자. */
+    TossPaymentClient(RestClient.Builder builder) {
+        this.restClient = builder.build();
+    }
+
+    private static RestClient.Builder defaultBuilder(String secretKey) {
         String encodedAuth = Base64.getEncoder()
                 .encodeToString((secretKey + ":").getBytes(StandardCharsets.UTF_8));
 
@@ -40,10 +51,9 @@ public class TossPaymentClient {
                 HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build());
         requestFactory.setReadTimeout(READ_TIMEOUT);
 
-        this.restClient = RestClient.builder()
+        return RestClient.builder()
                 .requestFactory(requestFactory)
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Basic " + encodedAuth)
-                .build();
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Basic " + encodedAuth);
     }
 
     /**
