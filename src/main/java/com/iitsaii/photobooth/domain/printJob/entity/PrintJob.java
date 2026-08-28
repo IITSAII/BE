@@ -20,10 +20,6 @@ import org.hibernate.annotations.CreationTimestamp;
 )
 public class PrintJob extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     /** 연결된 세션 (sessions.id 참조) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
@@ -47,10 +43,6 @@ public class PrintJob extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private PrintJobStatus status;
-
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
 
     @Column(name = "printed_at")
     private LocalDateTime printedAt;

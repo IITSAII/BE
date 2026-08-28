@@ -16,10 +16,6 @@ import org.hibernate.annotations.CreationTimestamp;
 @Table(name = "selected_photos")
 public class SelectedPhoto extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     /** 선택된 원본 사진 (captured_photos.id 참조) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "captured_photo_id", nullable = false)
@@ -28,10 +24,6 @@ public class SelectedPhoto extends BaseEntity {
     /** 선택 순서이자 인화 배치 순서 (1~4) */
     @Column(name = "select_order", nullable = false)
     private Integer selectOrder;
-
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
 
     public static SelectedPhoto of(CapturedPhoto capturedPhoto, Integer selectOrder) {
         SelectedPhoto selectedPhoto = new SelectedPhoto();

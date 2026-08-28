@@ -27,10 +27,6 @@ import org.hibernate.annotations.CreationTimestamp;
 @Table(name = "sessions")
 public class Session extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     /** 이번 회차에 랜덤 당첨된 제휴 업체 (magazines.id 참조) */
     @Column(name = "magazine_id")
     private Long magazineId;
@@ -69,10 +65,6 @@ public class Session extends BaseEntity {
 
     @Column(name = "coupon_expires_at")
     private LocalDateTime couponExpiresAt;
-
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
 
     /** 동시 요청으로 인한 단계 전이 덮어쓰기를 막기 위한 낙관적 락 버전 */
     @Version

@@ -21,10 +21,6 @@ import lombok.NoArgsConstructor;
 @Table(name = "payments")
 public class Payment extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     /** 연결된 세션 (sessions.id 참조) */
     @Column(name = "session_id", nullable = false)
     private Long sessionId;
