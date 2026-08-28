@@ -39,6 +39,8 @@ public class PaymentController {
             @ApiResponse(responseCode = "400", description = "PAYMENT 단계가 아니거나(`SessionErrorCode.INVALID_STEP`), " +
                     "금액 불일치(`PaymentErrorCode.AMOUNT_MISMATCH`), 토스 승인 실패(`PaymentErrorCode.PAYMENT_CONFIRM_FAILED`)"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 (`SessionErrorCode.SESSION_NOT_FOUND`)"),
+            @ApiResponse(responseCode = "409", description = "동시 요청으로 다른 트랜잭션이 먼저 처리함 (`SessionErrorCode.CONCURRENT_REQUEST`)"),
+            @ApiResponse(responseCode = "410", description = "PAYMENT 단계 타임아웃으로 세션이 만료됨 (`SessionErrorCode.SESSION_EXPIRED`)"),
     })
     @PostMapping("/confirm")
     public CommonResponse<SessionStatusResponse> confirm(
