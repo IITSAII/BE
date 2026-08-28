@@ -103,4 +103,21 @@ public class PrintJobService {
         printJob.markDone();
         session.advanceTo(SessionStep.DONE, null);
     }
+
+    @Transactional
+    public void failPrint(String sessionId) {
+        Session session = sessionRepository.findBySessionId(sessionId).orElseThrow(() -> new CustomException(SessionErrorCode.SESSION_NOT_FOUND));
+
+        PrintJob printJob = printJobRepository.findBySession(session).orElseThrow(() -> new CustomException(PrintJobErrorCode.PRINT_JOB_NOT_FOUND));
+
+        if (printJob.getStatus() == PrintJobStatus.DONE) {
+            throw new CustomException(PrintJobErrorCode.PRINT_ALREADY_DONE);
+        }
+
+        if (printJob.getFinalImageUrl() == null) {
+            throw new CustomException(PrintJobErrorCode.FINAL_IMAGE_NOT_READY);
+        }
+
+        printJob.markFailed();
+    }
 }

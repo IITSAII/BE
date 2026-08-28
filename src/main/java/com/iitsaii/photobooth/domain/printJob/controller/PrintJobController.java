@@ -111,4 +111,26 @@ public class PrintJobController {
         printJobService.completePrint(sessionId);
         return CommonResponse.ok();
     }
+
+    @Operation(
+            summary = "인쇄 실패 처리",
+            description = """
+                    맥북 프린트 에이전트가 인쇄 실패 시 호출한다.
+                    - 인쇄 작업 상태를 FAILED로 변경한다.
+                    - 세션은 PRINT 단계에 유지되어 재시도할 수 있다.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "인쇄 실패 처리 성공"),
+            @ApiResponse(responseCode = "400", description = "이미 완료된 인쇄 작업 (`PrintJobErrorCode.PRINT_ALREADY_DONE`)"),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)")
+    })
+    @PatchMapping("/failed")
+    public CommonResponse<Void> failPrint(
+            @Parameter(description = "세션의 공개 식별자")
+            @PathVariable String sessionId
+    ) {
+        printJobService.failPrint(sessionId);
+        return CommonResponse.ok();
+    }
 }
