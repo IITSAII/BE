@@ -120,4 +120,11 @@ public class PrintJobService {
 
         printJob.markFailed();
     }
+
+    @Transactional(readOnly = true)
+    public PrintJobResDTO.PrintQueue getPrintQueue() {
+        PrintJob printJob = printJobRepository.findFirstByStatusOrderByCreatedAtAsc(PrintJobStatus.QUEUED).orElseThrow(() -> new CustomException(PrintJobErrorCode.NO_PRINT_JOB_IN_QUEUE));
+
+        return PrintJobConverter.toPrintQueue(printJob);
+    }
 }

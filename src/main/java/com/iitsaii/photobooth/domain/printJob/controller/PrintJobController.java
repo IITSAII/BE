@@ -133,4 +133,21 @@ public class PrintJobController {
         printJobService.failPrint(sessionId);
         return CommonResponse.ok();
     }
+
+    @Operation(
+            summary = "인쇄 대기 작업 조회",
+            description = """
+                맥북 프린트 에이전트가 출력 대기 중인 인쇄 작업을 조회한다.
+                - 가장 먼저 생성된 QUEUED 상태의 인쇄 작업 1건을 반환한다.
+                - 반환된 최종 이미지 URL을 사용해 프린터에서 인쇄를 진행한다.
+                """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "인쇄 대기 작업 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "인쇄 대기 작업 없음")
+    })
+    @GetMapping("/queue")
+    public CommonResponse<PrintJobResDTO.PrintQueue> getPrintQueue() {
+        return CommonResponse.ok(printJobService.getPrintQueue());
+    }
 }

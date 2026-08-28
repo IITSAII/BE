@@ -43,6 +43,11 @@ public enum PrintJobErrorCode implements ErrorCode {
             HttpStatus.BAD_REQUEST,
             "PRINT400_6",
             "이미 인쇄가 완료된 작업입니다."
+    ),
+    NO_PRINT_JOB_IN_QUEUE(
+            HttpStatus.NO_CONTENT,
+            "PRINT404_2",
+            "출력 대기 중인 작업이 없습니다."
     );
 
     private final HttpStatus httpStatus;

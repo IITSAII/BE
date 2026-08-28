@@ -24,4 +24,14 @@ public class PrintJobConverter {
                 .status(printJob.getStatus())
                 .build();
     }
+
+    public static PrintJobResDTO.PrintQueue toPrintQueue(PrintJob printJob) {
+        return PrintJobResDTO.PrintQueue.builder()
+                .sessionId(printJob.getSession().getSessionId())
+                .finalImageUrl(printJob.getFinalImageUrl())
+                .frameType(printJob.getFrameType())
+                .filterBw(printJob.isFilterBw())
+                .filterBrightness(printJob.getFilterBrightness())
+                .build();
+    }
 }

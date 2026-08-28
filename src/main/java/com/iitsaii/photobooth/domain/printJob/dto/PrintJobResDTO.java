@@ -44,4 +44,23 @@ public class PrintJobResDTO {
             @Schema(description = "인쇄 작업 상태", example = "QUEUED")
             PrintJobStatus status
     ) {}
+
+    @Builder
+    public record PrintQueue(
+
+            @Schema(description = "세션 ID")
+            String sessionId,
+
+            @Schema(description = "최종 4컷 인쇄 이미지 URL", example = "ttps://iitsaii-photobooth-images.s3.ap-northeast-2.amazonaws.com/prints/sess_xxx/final.jpg")
+            String finalImageUrl,
+
+            @Schema(description = "선택한 프레임 종류", example = "DARK")
+            FrameType frameType,
+
+            @Schema(description = "흑백 필터 적용 여부", example = "false")
+            Boolean filterBw,
+
+            @Schema(description = "밝기 조절 값 (-100 ~ 100)", example = "20")
+            Integer filterBrightness
+    ) {}
 }
