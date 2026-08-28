@@ -28,6 +28,13 @@ public class Payment {
     @Column(name = "session_id", nullable = false)
     private Long sessionId;
 
+    /**
+     * 토스 결제 요청/승인에 사용하는 주문 식별자. Session.sessionId를 그대로 재사용한다 (별도 발급하지 않음).
+     * 영문 대소문자/숫자/-/_, 6~64자 (토스 규격) - sessionId 포맷이 이미 이 규격을 만족한다.
+     */
+    @Column(name = "order_id", length = 64, nullable = false, unique = true)
+    private String orderId;
+
     /** 토스페이먼츠 발급 고유 결제 키 (중복 승인 방지) */
     @Column(name = "payment_key", length = 200, nullable = false, unique = true)
     private String paymentKey;
@@ -43,18 +50,17 @@ public class Payment {
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
 
-    public static Payment of(Long sessionId, String paymentKey, String method) {
+    /** 토스 결제 승인 응답을 받은 시점에만 생성한다 (준비 단계 별도 row 없음). */
+    public static Payment approved(Long sessionId, String orderId, String paymentKey, String method,
+            LocalDateTime approvedAt) {
         Payment payment = new Payment();
         payment.sessionId = sessionId;
+        payment.orderId = orderId;
         payment.paymentKey = paymentKey;
         payment.method = method;
-        payment.status = PaymentStatus.READY;
+        payment.status = PaymentStatus.DONE;
+        payment.approvedAt = approvedAt;
         return payment;
-    }
-
-    public void approve() {
-        this.status = PaymentStatus.DONE;
-        this.approvedAt = LocalDateTime.now();
     }
 
     public void cancel() {
