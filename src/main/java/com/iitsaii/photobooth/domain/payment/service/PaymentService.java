@@ -79,11 +79,11 @@ public class PaymentService {
         try {
             paymentRepository.saveAndFlush(payment);
         } catch (DataIntegrityViolationException e) {
-            // 동시 요청으로 이미 다른 트랜잭션이 먼저 처리한 경우. 결제는 이미 승인됐으니 최신 세션 상태를 반환한다.
-            return SessionStatusResponse.from(
-                    sessionRepository.findBySessionId(sessionId)
-                            .orElseThrow(() -> new CustomException(SessionErrorCode.SESSION_NOT_FOUND))
-            );
+            // 동시 요청으로 이미 다른 트랜잭션이 먼저 처리한 경우.
+            // PostgreSQL은 이 시점에 현재 트랜잭션이 abort 상태가 되어 같은 트랜잭션 안에서는
+            // 추가 조회(SELECT 포함)도 실패하므로, 여기서 재조회하지 않고 예외를 던져 트랜잭션을 종료한다.
+            // 클라이언트는 이 응답을 받고 짧게 재시도하면 된다 (그때는 findByOrderId가 먼저 걸러줌).
+            throw new CustomException(SessionErrorCode.CONCURRENT_REQUEST);
         }
 
         session.completePayment(LocalDateTime.now().plus(RELATIONSHIP_STEP_TIMEOUT));

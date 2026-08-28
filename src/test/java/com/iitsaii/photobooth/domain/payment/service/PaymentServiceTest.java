@@ -67,6 +67,26 @@ class PaymentServiceTest {
         }
 
         @Test
+        @DisplayName("동시 요청으로 저장이 충돌하면(orderId unique 위반) CONCURRENT_REQUEST 예외를 던진다")
+        void throwsConcurrentRequestWhenSaveConflicts() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+            given(tossPaymentClient.confirm(any())).willReturn(
+                    new TossConfirmResponse("pay_key_1", "sess_abc123", "DONE", "카드",
+                            OffsetDateTime.now(), 6000L)
+            );
+            given(paymentRepository.saveAndFlush(any(Payment.class)))
+                    .willThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate order_id"));
+
+            assertThatThrownBy(() -> paymentService.confirm("sess_abc123", "pay_key_1", 6000))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(SessionErrorCode.CONCURRENT_REQUEST);
+
+            assertThat(session.getCurrentStep()).isEqualTo(SessionStep.PAYMENT);
+        }
+
+        @Test
         @DisplayName("존재하지 않는 세션이면 SESSION_NOT_FOUND 예외를 던진다")
         void throwsWhenSessionNotFound() {
             given(sessionRepository.findBySessionId("sess_none")).willReturn(Optional.empty());
