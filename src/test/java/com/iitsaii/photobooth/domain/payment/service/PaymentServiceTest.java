@@ -179,6 +179,72 @@ class PaymentServiceTest {
         }
 
         @Test
+        @DisplayName("토스가 4xx로 명확히 거부하면 재확인 없이 그대로 실패 처리한다")
+        void doesNotReconcileOnDefiniteFailure() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+            given(tossPaymentClient.confirm(any()))
+                    .willThrow(new CustomException(PaymentErrorCode.PAYMENT_CONFIRM_FAILED));
+
+            assertThatThrownBy(() -> paymentService.confirm("sess_abc123", "pay_key_1", 6000))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(PaymentErrorCode.PAYMENT_CONFIRM_FAILED);
+
+            verify(tossPaymentClient, never()).findApprovedByOrderId(any());
+        }
+
+        @Test
+        @DisplayName("502 응답 후 orderId 재조회에서 실제로 승인된 게 확인되면 정상 승인 처리한다")
+        void reconcilesAsSuccessWhenGatewayUnavailableButActuallyApproved() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+            given(tossPaymentClient.confirm(any()))
+                    .willThrow(new CustomException(PaymentErrorCode.PAYMENT_GATEWAY_UNAVAILABLE));
+            given(tossPaymentClient.findApprovedByOrderId("sess_abc123")).willReturn(Optional.of(
+                    new TossConfirmResponse("pay_key_1", "sess_abc123", "DONE", "카드", OffsetDateTime.now(), 6000L)
+            ));
+
+            SessionStatusResponse response = paymentService.confirm("sess_abc123", "pay_key_1", 6000);
+
+            assertThat(response.status()).isEqualTo(SessionStatus.PAID.name());
+            verify(paymentRepository).saveAndFlush(any(Payment.class));
+        }
+
+        @Test
+        @DisplayName("502 응답 후 orderId 재조회에서도 승인 확인이 안 되면 원래 예외를 던진다")
+        void rethrowsOriginalErrorWhenReconciliationFindsNothing() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+            given(tossPaymentClient.confirm(any()))
+                    .willThrow(new CustomException(PaymentErrorCode.PAYMENT_GATEWAY_UNAVAILABLE));
+            given(tossPaymentClient.findApprovedByOrderId("sess_abc123")).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> paymentService.confirm("sess_abc123", "pay_key_1", 6000))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(PaymentErrorCode.PAYMENT_GATEWAY_UNAVAILABLE);
+
+            verify(paymentRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        @DisplayName("네트워크 오류(RestClientException)여도 orderId 재조회로 승인 여부를 확인한다")
+        void reconcilesOnNetworkException() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+            given(tossPaymentClient.confirm(any()))
+                    .willThrow(new org.springframework.web.client.ResourceAccessException("timeout"));
+            given(tossPaymentClient.findApprovedByOrderId("sess_abc123")).willReturn(Optional.of(
+                    new TossConfirmResponse("pay_key_1", "sess_abc123", "DONE", "카드", OffsetDateTime.now(), 6000L)
+            ));
+
+            SessionStatusResponse response = paymentService.confirm("sess_abc123", "pay_key_1", 6000);
+
+            assertThat(response.status()).isEqualTo(SessionStatus.PAID.name());
+        }
+
+        @Test
         @DisplayName("이미 처리된 결제(orderId로 조회됨)면 재승인 없이 현재 세션 상태를 그대로 반환한다")
         void returnsExistingResultWhenAlreadyConfirmed() {
             Session session = Session.of("sess_abc123", 4, 6000);

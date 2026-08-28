@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
 
 @Service
 @RequiredArgsConstructor
@@ -65,8 +66,7 @@ public class PaymentService {
             throw new CustomException(PaymentErrorCode.AMOUNT_MISMATCH);
         }
 
-        TossConfirmResponse response = tossPaymentClient.confirm(
-                new TossConfirmRequest(paymentKey, sessionId, amount.longValue()));
+        TossConfirmResponse response = confirmWithReconciliation(sessionId, paymentKey, amount);
 
         if (response.approvedAt() == null) {
             // 토스 문서상 approvedAt은 nullable이지만, 승인 성공(status=DONE) 응답이라면 항상 채워져야 한다.
@@ -96,5 +96,25 @@ public class PaymentService {
         session.completePayment(LocalDateTime.now().plus(RELATIONSHIP_STEP_TIMEOUT));
 
         return SessionStatusResponse.from(session);
+    }
+
+    /**
+     * 토스 승인을 요청하고, 애매한 실패(타임아웃/네트워크 오류/5xx)면 orderId로 재조회해서
+     * 실제로는 승인이 됐는지 한 번 더 확인한다 ("서버는 성공, 응답만 유실"된 상황 방어).
+     * 토스가 4xx로 명확히 거부한 경우는 재확인 없이 그대로 실패 처리한다.
+     */
+    private TossConfirmResponse confirmWithReconciliation(String sessionId, String paymentKey, Integer amount) {
+        try {
+            return tossPaymentClient.confirm(new TossConfirmRequest(paymentKey, sessionId, amount.longValue()));
+        } catch (CustomException e) {
+            if (e.getErrorCode() != PaymentErrorCode.PAYMENT_GATEWAY_UNAVAILABLE) {
+                throw e;
+            }
+            return tossPaymentClient.findApprovedByOrderId(sessionId).orElseThrow(() -> e);
+        } catch (RestClientException e) {
+            return tossPaymentClient.findApprovedByOrderId(sessionId)
+                    .orElseThrow(() -> new CustomException(PaymentErrorCode.PAYMENT_GATEWAY_UNAVAILABLE,
+                            "결제 서비스 응답을 받지 못했습니다."));
+        }
     }
 }
