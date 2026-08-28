@@ -3,6 +3,7 @@ package com.iitsaii.photobooth.domain.printJob.dto;
 import com.iitsaii.photobooth.domain.printJob.entity.FrameType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.web.multipart.MultipartFile;
 
 public class PrintJobReqDTO {
 
@@ -21,5 +22,12 @@ public class PrintJobReqDTO {
 
             @Schema(description = "밝기 조절 값 (-100 ~ 100)", example = "75")
             Integer filterBrightness
+    ) {}
+
+    @Schema(description = "최종 인쇄 이미지 업로드 요청")
+    public record UploadFinalImage(
+            @NotNull
+            @Schema(description = "프레임과 필터가 적용된 최종 4컷 이미지 파일")
+            MultipartFile finalImage
     ) {}
 }

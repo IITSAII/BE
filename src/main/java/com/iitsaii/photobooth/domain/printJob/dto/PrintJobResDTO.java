@@ -16,4 +16,11 @@ public class PrintJobResDTO {
             @Schema(description = "선택된 프레임", example = "DARK")
             FrameType frameType
     ) {}
+
+    @Builder
+    @Schema(description = "최종 인쇄 이미지 업로드 응답")
+    public record UploadFinalImage(
+            @Schema(description = "업로드된 최종 인쇄 이미지 URL")
+            String finalImageUrl
+    ) {}
 }

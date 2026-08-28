@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -40,6 +41,31 @@ public class PrintJobController {
             @Valid @RequestBody PrintJobReqDTO.FrameSelect dto
     ) {
         return CommonResponse.ok(printJobService.selectFrame(sessionId, dto));
+    }
+
+    @Operation(
+            summary = "최종 인쇄 이미지 업로드",
+            description = """
+                    프론트가 프레임, 흑백, 밝기를 적용해 생성한 최종 4컷 이미지를 업로드한다.
+                    - FRAME 선택 이후 생성된 PrintJob에 최종 이미지 URL을 저장한다.
+                    - 업로드가 완료되면 인쇄 에이전트가 사용할 finalImageUrl이 생성된다.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "업로드 성공"),
+            @ApiResponse(responseCode = "400", description = "FRAME 단계가 아니거나 이미지가 비어 있음"),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업")
+    })
+    @PostMapping(
+            value = "/final-image",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public CommonResponse<PrintJobResDTO.UploadFinalImage> uploadFinalImage(
+            @Parameter(description = "세션의 공개 식별자")
+            @PathVariable String sessionId,
+            @ModelAttribute @Valid PrintJobReqDTO.UploadFinalImage dto
+    ) {
+        return CommonResponse.ok(printJobService.uploadFinalImage(sessionId, dto.finalImage()));
     }
 
 }

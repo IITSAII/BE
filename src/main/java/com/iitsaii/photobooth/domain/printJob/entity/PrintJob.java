@@ -79,4 +79,8 @@ public class PrintJob {
     public void markFailed() {
         this.status = PrintJobStatus.FAILED;
     }
+
+    public void updateFinalImage(String finalImageUrl) {
+        this.finalImageUrl = finalImageUrl;
+    }
 }

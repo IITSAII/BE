@@ -1,5 +1,6 @@
 package com.iitsaii.photobooth.domain.printJob.service;
 
+import com.iitsaii.photobooth.domain.photo.error.PhotoErrorCode;
 import com.iitsaii.photobooth.domain.printJob.converter.PrintJobConverter;
 import com.iitsaii.photobooth.domain.printJob.dto.PrintJobReqDTO;
 import com.iitsaii.photobooth.domain.printJob.dto.PrintJobResDTO;
@@ -11,9 +12,11 @@ import com.iitsaii.photobooth.domain.session.entity.SessionStep;
 import com.iitsaii.photobooth.domain.session.error.SessionErrorCode;
 import com.iitsaii.photobooth.domain.session.repository.SessionRepository;
 import com.iitsaii.photobooth.global.error.CustomException;
+import com.iitsaii.photobooth.global.s3.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -26,6 +29,7 @@ public class PrintJobService {
 
     private final SessionRepository sessionRepository;
     private final PrintJobRepository printJobRepository;
+    private final S3Service s3Service;
 
     @Transactional
     public PrintJobResDTO.FrameSelect selectFrame(String sessionId, PrintJobReqDTO.FrameSelect dto) {
@@ -42,8 +46,29 @@ public class PrintJobService {
         PrintJob printJob = PrintJob.of(session, dto.frameType(), dto.filterBw(), dto.filterBrightness());
         printJobRepository.save(printJob);
 
+        return PrintJobConverter.toFrameSelect(printJob);
+    }
+
+    @Transactional
+    public PrintJobResDTO.UploadFinalImage uploadFinalImage(String sessionId, MultipartFile finalImage) {
+        Session session = sessionRepository.findBySessionId(sessionId).orElseThrow(() -> new CustomException(SessionErrorCode.SESSION_NOT_FOUND));
+
+        if (session.getCurrentStep() != SessionStep.FRAME) {
+            throw new CustomException(PrintJobErrorCode.INVALID_FRAME_STEP);
+        }
+
+        PrintJob printJob = printJobRepository.findBySession(session).orElseThrow(() -> new CustomException(PrintJobErrorCode.PRINT_JOB_NOT_FOUND));
+
+        if (finalImage == null || finalImage.isEmpty()) {
+            throw new CustomException(PhotoErrorCode.EMPTY_IMAGE);
+        }
+
+        String imageUrl = s3Service.uploadFinalImage(finalImage, session.getSessionId());
+
+        printJob.updateFinalImage(imageUrl);
+
         session.advanceTo(SessionStep.PRINT, LocalDateTime.now().plus(PRINT_STEP_TIMEOUT));
 
-        return PrintJobConverter.toFrameSelect(printJob);
+        return PrintJobConverter.toUploadFinalImage(printJob);
     }
 }

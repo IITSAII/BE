@@ -59,6 +59,28 @@ public class S3Service {
         }
     }
 
+    public String uploadFinalImage(MultipartFile image, String sessionId) {
+        String key = "prints/%s/final-%s.%s".formatted(
+                sessionId,
+                UUID.randomUUID(),
+                getExtension(image.getOriginalFilename())
+        );
+
+        try {
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .contentType(image.getContentType())
+                    .build();
+
+            s3Client.putObject(request, RequestBody.fromBytes(image.getBytes()));
+
+            return createFileUrl(key);
+        } catch (IOException | S3Exception | SdkClientException e) {
+            throw new CustomException(PhotoErrorCode.PHOTO_UPLOAD_FAILED);
+        }
+    }
+
     private String createFileKey(String sessionId, Integer shotNumber, MultipartFile image) {
 
         String extension = getExtension(image.getOriginalFilename());

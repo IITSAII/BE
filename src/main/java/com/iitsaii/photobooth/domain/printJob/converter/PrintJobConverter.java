@@ -8,4 +8,10 @@ public class PrintJobConverter {
     public static PrintJobResDTO.FrameSelect toFrameSelect(PrintJob printJob) {
         return new PrintJobResDTO.FrameSelect(printJob.getId(), printJob.getFrameType());
     }
+
+    public static PrintJobResDTO.UploadFinalImage toUploadFinalImage(PrintJob printJob) {
+        return PrintJobResDTO.UploadFinalImage.builder()
+                .finalImageUrl(printJob.getFinalImageUrl())
+                .build();
+    }
 }
