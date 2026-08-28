@@ -80,6 +80,21 @@ class PaymentServiceTest {
         }
 
         @Test
+        @DisplayName("PAYMENT 단계 타임아웃이 지났으면 SESSION_EXPIRED 예외를 던지고 토스를 호출하지 않는다")
+        void throwsWhenSessionExpired() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            session.advanceTo(SessionStep.PAYMENT, java.time.LocalDateTime.now().minusMinutes(1));
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+
+            assertThatThrownBy(() -> paymentService.confirm("sess_abc123", "pay_key_1", 6000))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(SessionErrorCode.SESSION_EXPIRED);
+
+            verify(tossPaymentClient, never()).confirm(any());
+        }
+
+        @Test
         @DisplayName("PAYMENT 단계가 아니면 INVALID_STEP 예외를 던진다")
         void throwsWhenNotInPaymentStep() {
             Session session = Session.of("sess_abc123", 4, 6000);

@@ -13,6 +13,7 @@ public enum SessionErrorCode implements ErrorCode {
     INVALID_STEP(HttpStatus.BAD_REQUEST, "SESSION_400_2", "현재 단계에서 수행할 수 없는 요청입니다."),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "SESSION_404_1", "세션을 찾을 수 없습니다."),
     CONCURRENT_REQUEST(HttpStatus.CONFLICT, "SESSION_409_1", "동시에 처리할 수 없는 요청입니다. 다시 시도해주세요."),
+    SESSION_EXPIRED(HttpStatus.GONE, "SESSION_410_1", "세션이 만료되었습니다. 처음부터 다시 시작해주세요."),
     ;
 
     private final HttpStatus httpStatus;

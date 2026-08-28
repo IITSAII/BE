@@ -113,4 +113,18 @@ public class Session {
     public void markExpired() {
         this.status = SessionStatus.EXPIRED;
     }
+
+    /**
+     * PAYMENT 단계 타임아웃을 지연 평가(lazy)로 처리한다. 별도 배치/스케줄러 없이,
+     * 세션에 접근하는 시점(상태 조회, 결제 승인 시도 등)마다 이 메서드로 만료 여부를 확인한다.
+     * 결제는 기본값으로 대체 진행할 수 없는 단계라, 시간이 지나면 세션을 종료(EXPIRED)한다.
+     */
+    public void expireIfPaymentTimedOut(LocalDateTime now) {
+        if (currentStep == SessionStep.PAYMENT
+                && status != SessionStatus.EXPIRED
+                && stepExpiresAt != null
+                && now.isAfter(stepExpiresAt)) {
+            markExpired();
+        }
+    }
 }

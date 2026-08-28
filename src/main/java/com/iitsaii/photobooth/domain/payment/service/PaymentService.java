@@ -8,6 +8,7 @@ import com.iitsaii.photobooth.domain.payment.error.PaymentErrorCode;
 import com.iitsaii.photobooth.domain.payment.repository.PaymentRepository;
 import com.iitsaii.photobooth.domain.session.dto.SessionStatusResponse;
 import com.iitsaii.photobooth.domain.session.entity.Session;
+import com.iitsaii.photobooth.domain.session.entity.SessionStatus;
 import com.iitsaii.photobooth.domain.session.entity.SessionStep;
 import com.iitsaii.photobooth.domain.session.error.SessionErrorCode;
 import com.iitsaii.photobooth.domain.session.repository.SessionRepository;
@@ -46,6 +47,11 @@ public class PaymentService {
     public SessionStatusResponse confirm(String sessionId, String paymentKey, Integer amount) {
         Session session = sessionRepository.findBySessionId(sessionId)
                 .orElseThrow(() -> new CustomException(SessionErrorCode.SESSION_NOT_FOUND));
+
+        session.expireIfPaymentTimedOut(LocalDateTime.now());
+        if (session.getStatus() == SessionStatus.EXPIRED) {
+            throw new CustomException(SessionErrorCode.SESSION_EXPIRED);
+        }
 
         Optional<Payment> existingPayment = paymentRepository.findByOrderId(sessionId);
         if (existingPayment.isPresent()) {
