@@ -71,4 +71,17 @@ public class PrintJobService {
 
         return PrintJobConverter.toUploadFinalImage(printJob);
     }
+
+    @Transactional(readOnly = true)
+    public PrintJobResDTO.PrintInfo getPrintInfo(String sessionId) {
+        Session session = sessionRepository.findBySessionId(sessionId).orElseThrow(() -> new CustomException(SessionErrorCode.SESSION_NOT_FOUND));
+
+        PrintJob printJob = printJobRepository.findBySession(session).orElseThrow(() -> new CustomException(PrintJobErrorCode.PRINT_JOB_NOT_FOUND));
+
+        if (printJob.getFinalImageUrl() == null) {
+            throw new CustomException(PrintJobErrorCode.FINAL_IMAGE_NOT_READY);
+        }
+
+        return PrintJobConverter.toPrintInfo(printJob);
+    }
 }

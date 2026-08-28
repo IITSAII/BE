@@ -14,4 +14,14 @@ public class PrintJobConverter {
                 .finalImageUrl(printJob.getFinalImageUrl())
                 .build();
     }
+
+    public static PrintJobResDTO.PrintInfo toPrintInfo(PrintJob printJob) {
+        return PrintJobResDTO.PrintInfo.builder()
+                .finalImageUrl(printJob.getFinalImageUrl())
+                .frameType(printJob.getFrameType())
+                .filterBw(printJob.isFilterBw())
+                .filterBrightness(printJob.getFilterBrightness())
+                .status(printJob.getStatus())
+                .build();
+    }
 }
