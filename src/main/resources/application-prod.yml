@@ -9,7 +9,8 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate
+      # TODO: 최초 배포로 스키마 부트스트랩 후 validate로 되돌릴 것
+      ddl-auto: create
     show-sql: false
 
 logging:
