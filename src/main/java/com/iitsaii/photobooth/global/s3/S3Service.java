@@ -67,8 +67,8 @@ public class S3Service {
     }
 
     private String createFileUrl(String key) {
-        return "https://%s.s3.ap-northeast-2.amazonaws.com/%s"
-                .formatted(bucket, key);
+        return "https://%s.s3.%s.amazonaws.com/%s"
+                .formatted(bucket, region, key);
     }
 
     private String getExtension(String filename) {
