@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 public enum PaymentErrorCode implements ErrorCode {
 
     PAYMENT_CONFIRM_FAILED(HttpStatus.BAD_REQUEST, "PAYMENT_400_1", "결제 승인에 실패했습니다."),
+    AMOUNT_MISMATCH(HttpStatus.BAD_REQUEST, "PAYMENT_400_2", "요청 금액이 세션의 결제 금액과 일치하지 않습니다."),
     ;
 
     private final HttpStatus httpStatus;
