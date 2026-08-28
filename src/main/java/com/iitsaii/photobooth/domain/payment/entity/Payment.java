@@ -28,11 +28,18 @@ public class Payment {
     @Column(name = "session_id", nullable = false)
     private Long sessionId;
 
-    /** 토스페이먼츠 발급 고유 결제 키 (중복 승인 방지) */
-    @Column(name = "payment_key", length = 200, nullable = false, unique = true)
+    /**
+     * 우리 상점이 발급하는 주문 식별자. 토스 결제 요청 시 함께 전달하며, 결제 상태가 바뀌어도 유지된다.
+     * 영문 대소문자/숫자/-/_, 6~64자 (토스 규격).
+     */
+    @Column(name = "order_id", length = 64, nullable = false, unique = true)
+    private String orderId;
+
+    /** 토스페이먼츠 발급 고유 결제 키 (중복 승인 방지). 결제 준비 시점에는 알 수 없고, 승인 시 채워진다. */
+    @Column(name = "payment_key", length = 200, unique = true)
     private String paymentKey;
 
-    /** 결제 수단 (토스페이, 카드, 계좌이체 등) */
+    /** 결제 수단 (토스페이, 카드, 계좌이체 등). 승인 시 채워진다. */
     @Column(length = 30)
     private String method;
 
@@ -43,16 +50,19 @@ public class Payment {
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
 
-    public static Payment of(Long sessionId, String paymentKey, String method) {
+    /** 결제 준비 단계. 결제창을 열기 전 orderId를 발급하며, paymentKey/method는 승인 시점에 채워진다. */
+    public static Payment prepare(Long sessionId, String orderId) {
         Payment payment = new Payment();
         payment.sessionId = sessionId;
-        payment.paymentKey = paymentKey;
-        payment.method = method;
+        payment.orderId = orderId;
         payment.status = PaymentStatus.READY;
         return payment;
     }
 
-    public void approve() {
+    /** 토스 결제 승인 완료 처리. */
+    public void approve(String paymentKey, String method) {
+        this.paymentKey = paymentKey;
+        this.method = method;
         this.status = PaymentStatus.DONE;
         this.approvedAt = LocalDateTime.now();
     }

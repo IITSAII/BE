@@ -100,6 +100,12 @@ public class Session {
         advanceTo(SessionStep.CAPTURE, nextStepExpiresAt);
     }
 
+    /** 결제 승인 완료 처리. 결제 상태로 전환하고 RELATIONSHIP 단계로 진입시킨다. */
+    public void completePayment(LocalDateTime nextStepExpiresAt) {
+        markPaid();
+        advanceTo(SessionStep.RELATIONSHIP, nextStepExpiresAt);
+    }
+
     public void markPaid() {
         this.status = SessionStatus.PAID;
     }
