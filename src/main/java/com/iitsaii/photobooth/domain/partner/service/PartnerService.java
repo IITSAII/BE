@@ -34,6 +34,11 @@ public class PartnerService {
         return selected;
     }
 
+    public Partner getById(Long partnerId) {
+        return partnerRepository.findById(partnerId)
+                .orElseThrow(() -> new CustomException(PartnerErrorCode.PARTNER_NOT_FOUND));
+    }
+
     /** candidatesSortedAsc는 lastAssignedSeq 오름차순으로 정렬되어 있다고 가정한다. */
     private Partner pickLeastRecentlyAssigned(List<Partner> candidatesSortedAsc) {
         Long minSeq = candidatesSortedAsc.get(0).getLastAssignedSeq();

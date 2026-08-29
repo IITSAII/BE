@@ -29,6 +29,10 @@ public class Partner extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    /** 매장 로고 이미지 */
+    @Column(name = "logo_url", length = 500)
+    private String logoUrl;
+
     /** 매장 대표 사진 */
     @Column(name = "thumbnail_image_url", length = 500)
     private String thumbnailImageUrl;
@@ -63,6 +67,7 @@ public class Partner extends BaseEntity {
             String location,
             String shortDescription,
             String description,
+            String logoUrl,
             String thumbnailImageUrl,
             String imageUrl,
             DirectionType directionType,
@@ -74,6 +79,7 @@ public class Partner extends BaseEntity {
         partner.location = location;
         partner.shortDescription = shortDescription;
         partner.description = description;
+        partner.logoUrl = logoUrl;
         partner.thumbnailImageUrl = thumbnailImageUrl;
         partner.imageUrl = imageUrl;
         partner.directionType = directionType;

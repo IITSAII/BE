@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 public enum PartnerErrorCode implements ErrorCode {
 
     NO_ACTIVE_PARTNER(HttpStatus.NOT_FOUND, "PARTNER_404_1", "배정 가능한 제휴 업체가 없습니다."),
+    PARTNER_NOT_FOUND(HttpStatus.NOT_FOUND, "PARTNER_404_2", "제휴 업체를 찾을 수 없습니다."),
     ;
 
     private final HttpStatus httpStatus;

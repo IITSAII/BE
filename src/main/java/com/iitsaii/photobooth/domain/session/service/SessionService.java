@@ -1,6 +1,8 @@
 package com.iitsaii.photobooth.domain.session.service;
 
 import com.iitsaii.photobooth.global.error.CustomException;
+import com.iitsaii.photobooth.domain.partner.dto.PartnerResponse;
+import com.iitsaii.photobooth.domain.partner.service.PartnerService;
 import com.iitsaii.photobooth.domain.session.dto.SessionCreateResponse;
 import com.iitsaii.photobooth.domain.session.dto.SessionStatusResponse;
 import com.iitsaii.photobooth.domain.session.entity.RelationshipType;
@@ -42,6 +44,7 @@ public class SessionService {
     private static final Duration PAYMENT_STEP_TIMEOUT = Duration.ofMinutes(5);
 
     private final SessionRepository sessionRepository;
+    private final PartnerService partnerService;
 
     @Transactional
     public SessionCreateResponse createSession(Integer quantity) {
@@ -80,6 +83,16 @@ public class SessionService {
             // 동시 요청으로 같은 세션의 단계를 동시에 전이시키려 한 경우. 먼저 커밋된 요청만 반영한다.
             throw new CustomException(SessionErrorCode.CONCURRENT_REQUEST);
         }
+    }
+
+    @Transactional
+    public PartnerResponse getAssignedPartner(String sessionId) {
+        Session session = findBySessionId(sessionId);
+        if (session.getPartnerId() == null) {
+            throw new CustomException(SessionErrorCode.PARTNER_NOT_ASSIGNED);
+        }
+
+        return PartnerResponse.of(partnerService.getById(session.getPartnerId()), session);
     }
 
     private Session findBySessionId(String sessionId) {

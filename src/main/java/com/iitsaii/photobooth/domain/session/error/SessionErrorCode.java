@@ -14,6 +14,7 @@ public enum SessionErrorCode implements ErrorCode {
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "SESSION_404_1", "세션을 찾을 수 없습니다."),
     CONCURRENT_REQUEST(HttpStatus.CONFLICT, "SESSION_409_1", "동시에 처리할 수 없는 요청입니다. 다시 시도해주세요."),
     SESSION_EXPIRED(HttpStatus.GONE, "SESSION_410_1", "세션이 만료되었습니다. 처음부터 다시 시작해주세요."),
+    PARTNER_NOT_ASSIGNED(HttpStatus.NOT_FOUND, "SESSION_404_2", "아직 배정된 제휴 업체가 없습니다."),
     ;
 
     private final HttpStatus httpStatus;
