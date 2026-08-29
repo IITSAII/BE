@@ -12,6 +12,8 @@ import com.iitsaii.photobooth.domain.payment.dto.TossConfirmResponse;
 import com.iitsaii.photobooth.domain.payment.entity.Payment;
 import com.iitsaii.photobooth.domain.payment.error.PaymentErrorCode;
 import com.iitsaii.photobooth.domain.payment.repository.PaymentRepository;
+import com.iitsaii.photobooth.domain.partner.entity.Partner;
+import com.iitsaii.photobooth.domain.partner.service.PartnerService;
 import com.iitsaii.photobooth.domain.session.dto.SessionStatusResponse;
 import com.iitsaii.photobooth.domain.session.entity.Session;
 import com.iitsaii.photobooth.domain.session.entity.SessionStatus;
@@ -41,8 +43,17 @@ class PaymentServiceTest {
     @Mock
     private TossPaymentClient tossPaymentClient;
 
+    @Mock
+    private PartnerService partnerService;
+
     @InjectMocks
     private PaymentService paymentService;
+
+    private void stubPartnerAssignment() {
+        Partner partner = org.mockito.Mockito.mock(Partner.class);
+        given(partner.getId()).willReturn(1L);
+        given(partnerService.assignRandomPartner()).willReturn(partner);
+    }
 
     @Nested
     @DisplayName("confirm")
@@ -57,12 +68,15 @@ class PaymentServiceTest {
                     new TossConfirmResponse("pay_key_1", "sess_abc123", "DONE", "카드",
                             OffsetDateTime.now(), 6000L)
             );
+            stubPartnerAssignment();
 
             SessionStatusResponse response = paymentService.confirm("sess_abc123", "pay_key_1", 6000);
 
             assertThat(response.status()).isEqualTo(SessionStatus.PAID.name());
             assertThat(response.currentStep()).isEqualTo(SessionStep.RELATIONSHIP.name());
             assertThat(session.getStepExpiresAt()).isNotNull();
+            assertThat(session.getPartnerId()).isEqualTo(1L);
+            assertThat(session.getCouponExpiresAt()).isNotNull();
             verify(paymentRepository).saveAndFlush(any(Payment.class));
         }
 
@@ -204,6 +218,7 @@ class PaymentServiceTest {
             given(tossPaymentClient.findApprovedByOrderId("sess_abc123")).willReturn(Optional.of(
                     new TossConfirmResponse("pay_key_1", "sess_abc123", "DONE", "카드", OffsetDateTime.now(), 6000L)
             ));
+            stubPartnerAssignment();
 
             SessionStatusResponse response = paymentService.confirm("sess_abc123", "pay_key_1", 6000);
 
@@ -238,6 +253,7 @@ class PaymentServiceTest {
             given(tossPaymentClient.findApprovedByOrderId("sess_abc123")).willReturn(Optional.of(
                     new TossConfirmResponse("pay_key_1", "sess_abc123", "DONE", "카드", OffsetDateTime.now(), 6000L)
             ));
+            stubPartnerAssignment();
 
             SessionStatusResponse response = paymentService.confirm("sess_abc123", "pay_key_1", 6000);
 

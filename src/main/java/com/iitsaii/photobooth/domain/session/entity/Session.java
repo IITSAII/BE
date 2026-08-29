@@ -99,6 +99,16 @@ public class Session extends BaseEntity {
         advanceTo(SessionStep.RELATIONSHIP, nextStepExpiresAt);
     }
 
+    /**
+     * 결제 확정 시 랜덤 배정된 제휴 업체와 쿠폰 사용 만료 시각을 기록한다.
+     * couponExpiresAt은 촬영일(=결제 확정일) 다음날 23:59:59로 계산해서 넘겨받는다.
+     * 쿠폰 자체(도장 사용 여부)는 이 서비스가 아니라 방문 업체가 관리하며, 여기서는 만료 기준 시각만 보관한다.
+     */
+    public void assignPartner(Long partnerId, LocalDateTime couponExpiresAt) {
+        this.partnerId = partnerId;
+        this.couponExpiresAt = couponExpiresAt;
+    }
+
     public void markPaid() {
         this.status = SessionStatus.PAID;
     }

@@ -6,6 +6,8 @@ import com.iitsaii.photobooth.domain.payment.dto.TossConfirmResponse;
 import com.iitsaii.photobooth.domain.payment.entity.Payment;
 import com.iitsaii.photobooth.domain.payment.error.PaymentErrorCode;
 import com.iitsaii.photobooth.domain.payment.repository.PaymentRepository;
+import com.iitsaii.photobooth.domain.partner.entity.Partner;
+import com.iitsaii.photobooth.domain.partner.service.PartnerService;
 import com.iitsaii.photobooth.domain.session.dto.SessionStatusResponse;
 import com.iitsaii.photobooth.domain.session.entity.Session;
 import com.iitsaii.photobooth.domain.session.entity.SessionStatus;
@@ -38,6 +40,7 @@ public class PaymentService {
     private final SessionRepository sessionRepository;
     private final PaymentRepository paymentRepository;
     private final TossPaymentClient tossPaymentClient;
+    private final PartnerService partnerService;
 
     /**
      * 결제 승인. orderId는 별도 발급하지 않고 Session.sessionId를 그대로 사용한다.
@@ -114,6 +117,10 @@ public class PaymentService {
         }
 
         session.completePayment(now.plus(RELATIONSHIP_STEP_TIMEOUT));
+
+        Partner partner = partnerService.assignRandomPartner();
+        LocalDateTime couponExpiresAt = now.toLocalDate().plusDays(1).atTime(23, 59, 59);
+        session.assignPartner(partner.getId(), couponExpiresAt);
 
         return SessionStatusResponse.from(session);
     }
