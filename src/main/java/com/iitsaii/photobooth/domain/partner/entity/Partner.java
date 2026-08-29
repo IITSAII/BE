@@ -1,24 +1,22 @@
-package com.iitsaii.photobooth.domain.magazine.entity;
+package com.iitsaii.photobooth.domain.partner.entity;
 
 import com.iitsaii.photobooth.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
 
 /** 제휴 업체 정보 및 쿠폰. */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "magazines")
-public class Magazine extends BaseEntity {
+@Table(name = "partners")
+public class Partner extends BaseEntity {
 
     @Column(length = 100, nullable = false)
     private String name;
@@ -35,8 +33,14 @@ public class Magazine extends BaseEntity {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    @Column(name = "naver_map_url", length = 500)
-    private String naverMapUrl;
+    /** 길찾기 제공 방식 (MAP_URL: 네이버 지도 링크, WALK_GIF: 도보 경로 GIF) */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "direction_type", length = 20, nullable = false)
+    private DirectionType directionType;
+
+    /** direction_type이 MAP_URL이면 네이버 지도 URL, WALK_GIF이면 GIF의 S3 URL */
+    @Column(name = "direction_url", length = 500)
+    private String directionUrl;
 
     /** 실제 쿠폰 혜택 내용 (예: 아메리카노 1잔 무료) */
     @Column(name = "coupon_description", length = 200)
@@ -50,25 +54,27 @@ public class Magazine extends BaseEntity {
     @Column(name = "last_assigned_at")
     private LocalDateTime lastAssignedAt;
 
-    public static Magazine of(
+    public static Partner of(
             String name,
             String location,
             String shortDescription,
             String description,
             String imageUrl,
-            String naverMapUrl,
+            DirectionType directionType,
+            String directionUrl,
             String couponDescription
     ) {
-        Magazine magazine = new Magazine();
-        magazine.name = name;
-        magazine.location = location;
-        magazine.shortDescription = shortDescription;
-        magazine.description = description;
-        magazine.imageUrl = imageUrl;
-        magazine.naverMapUrl = naverMapUrl;
-        magazine.couponDescription = couponDescription;
-        magazine.active = true;
-        return magazine;
+        Partner partner = new Partner();
+        partner.name = name;
+        partner.location = location;
+        partner.shortDescription = shortDescription;
+        partner.description = description;
+        partner.imageUrl = imageUrl;
+        partner.directionType = directionType;
+        partner.directionUrl = directionUrl;
+        partner.couponDescription = couponDescription;
+        partner.active = true;
+        return partner;
     }
 
     public void assignNow() {

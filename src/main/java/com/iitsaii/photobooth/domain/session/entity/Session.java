@@ -27,9 +27,9 @@ import org.hibernate.annotations.CreationTimestamp;
 @Table(name = "sessions")
 public class Session extends BaseEntity {
 
-    /** 이번 회차에 랜덤 당첨된 제휴 업체 (magazines.id 참조) */
-    @Column(name = "magazine_id")
-    private Long magazineId;
+    /** 이번 회차에 랜덤 당첨된 제휴 업체 (partners.id 참조) */
+    @Column(name = "partner_id")
+    private Long partnerId;
 
     /** 외부(토스 등) 연동 및 프론트 참조용 공개 식별자. FK로는 쓰이지 않음 */
     @Column(name = "session_id", length = 64, nullable = false, unique = true)
