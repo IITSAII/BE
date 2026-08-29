@@ -39,6 +39,11 @@ public class PartnerService {
                 .orElseThrow(() -> new CustomException(PartnerErrorCode.PARTNER_NOT_FOUND));
     }
 
+    /** 매거진 페이지 노출용 활성 업체 목록. */
+    public List<Partner> getActivePartners() {
+        return partnerRepository.findByActiveTrueOrderByLastAssignedSeqAsc();
+    }
+
     /** candidatesSortedAsc는 lastAssignedSeq 오름차순으로 정렬되어 있다고 가정한다. */
     private Partner pickLeastRecentlyAssigned(List<Partner> candidatesSortedAsc) {
         Long minSeq = candidatesSortedAsc.get(0).getLastAssignedSeq();
