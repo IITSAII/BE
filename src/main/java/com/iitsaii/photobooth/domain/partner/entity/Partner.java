@@ -58,7 +58,10 @@ public class Partner extends BaseEntity {
     @Column(name = "is_active", nullable = false)
     private boolean active;
 
-    /** 최근 당첨 순번(전역 시퀀스). 랜덤 배정 시 값이 작은(오래된) 업체를 우선하는 데 사용 */
+    /**
+     * 최근 당첨 순번(전역 시퀀스). 랜덤 배정 시 이 값이 가장 큰(=가장 최근 당첨된) 업체 1곳만 후보에서 제외하는 데 사용.
+     * 특정 업체가 연속으로 당첨되는 상황을 최소화하는 게 목적이다.
+     */
     @Column(name = "last_assigned_seq")
     private Long lastAssignedSeq;
 
