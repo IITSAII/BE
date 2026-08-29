@@ -6,7 +6,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -55,9 +54,9 @@ public class Partner extends BaseEntity {
     @Column(name = "is_active", nullable = false)
     private boolean active;
 
-    /** 최근 당첨 시각. 랜덤 배정 시 최근 당첨 업체를 후순위로 미루는 데 사용 */
-    @Column(name = "last_assigned_at")
-    private LocalDateTime lastAssignedAt;
+    /** 최근 당첨 순번(전역 시퀀스). 랜덤 배정 시 값이 작은(오래된) 업체를 우선하는 데 사용 */
+    @Column(name = "last_assigned_seq")
+    private Long lastAssignedSeq;
 
     public static Partner of(
             String name,
@@ -84,8 +83,9 @@ public class Partner extends BaseEntity {
         return partner;
     }
 
-    public void assignNow() {
-        this.lastAssignedAt = LocalDateTime.now();
+    /** 전역 시퀀스에서 발급받은 다음 순번을 최근 당첨 순번으로 기록한다. */
+    public void assignNow(long nextSeq) {
+        this.lastAssignedSeq = nextSeq;
     }
 
     public void deactivate() {
