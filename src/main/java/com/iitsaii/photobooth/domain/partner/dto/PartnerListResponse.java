@@ -1,6 +1,5 @@
 package com.iitsaii.photobooth.domain.partner.dto;
 
-import com.iitsaii.photobooth.domain.partner.entity.DirectionType;
 import com.iitsaii.photobooth.domain.partner.entity.Partner;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -28,11 +27,7 @@ public record PartnerListResponse(
         @Schema(description = "매장 상세 사진 URL")
         String imageUrl,
 
-        @Schema(description = "길찾기 제공 방식: MAP_URL(네이버 지도 링크) 또는 WALK_GIF(도보 경로 GIF)",
-                example = "MAP_URL")
-        DirectionType directionType,
-
-        @Schema(description = "direction_type이 MAP_URL이면 네이버 지도 URL, WALK_GIF이면 GIF의 S3 URL")
+        @Schema(description = "네이버 지도 길찾기 URL")
         String directionUrl,
 
         @Schema(description = "실제 쿠폰 혜택 내용", example = "아메리카노 1잔 무료")
@@ -48,7 +43,6 @@ public record PartnerListResponse(
                 partner.getDescription(),
                 partner.getThumbnailImageUrl(),
                 partner.getImageUrl(),
-                partner.getDirectionType(),
                 partner.getDirectionUrl(),
                 partner.getCouponDescription()
         );

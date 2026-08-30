@@ -3,8 +3,6 @@ package com.iitsaii.photobooth.domain.partner.entity;
 import com.iitsaii.photobooth.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -41,12 +39,7 @@ public class Partner extends BaseEntity {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    /** 길찾기 제공 방식 (MAP_URL: 네이버 지도 링크, WALK_GIF: 도보 경로 GIF) */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "direction_type", length = 20, nullable = false)
-    private DirectionType directionType;
-
-    /** direction_type이 MAP_URL이면 네이버 지도 URL, WALK_GIF이면 GIF의 S3 URL */
+    /** 네이버 지도 길찾기 URL */
     @Column(name = "direction_url", length = 500)
     private String directionUrl;
 
@@ -73,7 +66,6 @@ public class Partner extends BaseEntity {
             String logoUrl,
             String thumbnailImageUrl,
             String imageUrl,
-            DirectionType directionType,
             String directionUrl,
             String couponDescription
     ) {
@@ -85,7 +77,6 @@ public class Partner extends BaseEntity {
         partner.logoUrl = logoUrl;
         partner.thumbnailImageUrl = thumbnailImageUrl;
         partner.imageUrl = imageUrl;
-        partner.directionType = directionType;
         partner.directionUrl = directionUrl;
         partner.couponDescription = couponDescription;
         partner.active = true;
