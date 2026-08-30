@@ -6,7 +6,6 @@ import com.iitsaii.photobooth.domain.payment.dto.TossConfirmResponse;
 import com.iitsaii.photobooth.domain.payment.entity.Payment;
 import com.iitsaii.photobooth.domain.payment.error.PaymentErrorCode;
 import com.iitsaii.photobooth.domain.payment.repository.PaymentRepository;
-import com.iitsaii.photobooth.domain.partner.entity.Partner;
 import com.iitsaii.photobooth.domain.partner.service.PartnerService;
 import com.iitsaii.photobooth.domain.session.dto.SessionStatusResponse;
 import com.iitsaii.photobooth.domain.session.entity.Session;
@@ -118,17 +117,9 @@ public class PaymentService {
 
         session.completePayment(now.plus(RELATIONSHIP_STEP_TIMEOUT));
 
-        // 결제는 이미 외부(토스)에서 승인되어 되돌릴 수 없으므로, 업체 배정 실패로 이 트랜잭션을
-        // 롤백하면 "고객은 결제했는데 세션은 시작 전 상태로 되돌아가는" 상황이 생긴다.
-        // 배정 실패는 로그만 남기고 세션은 정상 진행시킨다 (운영팀이 로그 보고 수동 배정).
-        try {
-            Partner partner = partnerService.assignRandomPartner();
-            LocalDateTime couponExpiresAt = now.toLocalDate().plusDays(1).atTime(23, 59, 59);
-            session.assignPartner(partner.getId(), couponExpiresAt);
-        } catch (CustomException e) {
-            log.warn("결제는 승인됐지만 제휴 업체 배정에 실패했습니다. 수동 배정 검토 필요. "
-                    + "sessionId={}, errorCode={}", sessionId, e.getErrorCode(), e);
-        }
+        // 실패해도 결제는 이미 외부(토스)에서 승인되어 되돌릴 수 없으므로 이 트랜잭션을 막지 않는다.
+        // 이후 세션 조회 시점(SessionService.getStatus)에 배정을 다시 시도한다.
+        partnerService.assignPartnerToSession(session);
 
         return SessionStatusResponse.from(session);
     }

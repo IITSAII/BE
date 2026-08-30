@@ -7,6 +7,7 @@ import com.iitsaii.photobooth.domain.session.dto.SessionCreateResponse;
 import com.iitsaii.photobooth.domain.session.dto.SessionStatusResponse;
 import com.iitsaii.photobooth.domain.session.entity.RelationshipType;
 import com.iitsaii.photobooth.domain.session.entity.Session;
+import com.iitsaii.photobooth.domain.session.entity.SessionStatus;
 import com.iitsaii.photobooth.domain.session.entity.SessionStep;
 import com.iitsaii.photobooth.domain.session.error.SessionErrorCode;
 import com.iitsaii.photobooth.domain.session.repository.SessionRepository;
@@ -65,6 +66,13 @@ public class SessionService {
     public SessionStatusResponse getStatus(String sessionId) {
         Session session = findBySessionId(sessionId);
         session.expireIfPaymentTimedOut(LocalDateTime.now());
+
+        // 결제 승인 시점(PaymentService.confirm)에 업체 배정이 실패했던 세션을 위한 재시도.
+        // 결제는 완료됐는데(PAID) 아직 업체가 없으면 조회 시점마다 한 번씩 다시 배정을 시도한다.
+        if (session.getStatus() == SessionStatus.PAID && session.getPartnerId() == null) {
+            partnerService.assignPartnerToSession(session);
+        }
+
         return SessionStatusResponse.from(session);
     }
 

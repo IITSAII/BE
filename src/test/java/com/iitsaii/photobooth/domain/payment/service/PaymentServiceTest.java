@@ -12,7 +12,6 @@ import com.iitsaii.photobooth.domain.payment.dto.TossConfirmResponse;
 import com.iitsaii.photobooth.domain.payment.entity.Payment;
 import com.iitsaii.photobooth.domain.payment.error.PaymentErrorCode;
 import com.iitsaii.photobooth.domain.payment.repository.PaymentRepository;
-import com.iitsaii.photobooth.domain.partner.entity.Partner;
 import com.iitsaii.photobooth.domain.partner.service.PartnerService;
 import com.iitsaii.photobooth.domain.session.dto.SessionStatusResponse;
 import com.iitsaii.photobooth.domain.session.entity.Session;
@@ -50,9 +49,11 @@ class PaymentServiceTest {
     private PaymentService paymentService;
 
     private void stubPartnerAssignment() {
-        Partner partner = org.mockito.Mockito.mock(Partner.class);
-        given(partner.getId()).willReturn(1L);
-        given(partnerService.assignRandomPartner()).willReturn(partner);
+        given(partnerService.assignPartnerToSession(any(Session.class))).willAnswer(invocation -> {
+            Session session = invocation.getArgument(0);
+            session.assignPartner(1L, java.time.LocalDateTime.now());
+            return true;
+        });
     }
 
     @Nested
