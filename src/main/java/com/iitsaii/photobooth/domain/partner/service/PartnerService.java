@@ -42,17 +42,18 @@ public class PartnerService {
     }
 
     /**
-     * 활성 업체 중 가장 최근에 당첨된 업체 1곳만 후보에서 제외하고, 나머지 중 하나를 무작위로 뽑아
-     * 당첨 순번을 갱신한다. 특정 업체가 연속으로 당첨되는 상황을 최소화하는 게 목적이다.
+     * 노출 가능한(활성이면서 협약이 만료되지 않은) 업체 중 가장 최근에 당첨된 업체 1곳만 후보에서
+     * 제외하고, 나머지 중 하나를 무작위로 뽑아 당첨 순번을 갱신한다.
+     * 특정 업체가 연속으로 당첨되는 상황을 최소화하는 게 목적이다.
      */
     @Transactional
     public Partner assignRandomPartner() {
-        List<Partner> activePartners = partnerRepository.findByActiveTrueOrderByLastAssignedSeqAsc();
-        if (activePartners.isEmpty()) {
+        List<Partner> availablePartners = partnerRepository.findAvailableOrderByLastAssignedSeqAsc();
+        if (availablePartners.isEmpty()) {
             throw new CustomException(PartnerErrorCode.NO_ACTIVE_PARTNER);
         }
 
-        List<Partner> candidates = excludeMostRecentlyAssigned(activePartners);
+        List<Partner> candidates = excludeMostRecentlyAssigned(availablePartners);
         Partner selected = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
         selected.assignNow(nextAssignedSeq());
         return selected;
@@ -63,27 +64,27 @@ public class PartnerService {
                 .orElseThrow(() -> new CustomException(PartnerErrorCode.PARTNER_NOT_FOUND));
     }
 
-    /** 매거진 페이지 노출용 활성 업체 목록. */
+    /** 매거진 페이지 노출용 업체 목록 (활성이면서 협약이 만료되지 않은 업체만). */
     public List<Partner> getActivePartners() {
-        return partnerRepository.findByActiveTrueOrderByLastAssignedSeqAsc();
+        return partnerRepository.findAvailableOrderByLastAssignedSeqAsc();
     }
 
     /**
-     * activePartnersSortedAsc는 lastAssignedSeq 오름차순(가장 최근 당첨 업체가 맨 뒤)으로 정렬되어 있다고 가정한다.
-     * 활성 업체가 1곳뿐이면 제외할 수 없으므로 그대로 반환하고,
+     * availablePartnersSortedAsc는 lastAssignedSeq 오름차순(가장 최근 당첨 업체가 맨 뒤)으로 정렬되어 있다고 가정한다.
+     * 후보가 1곳뿐이면 제외할 수 없으므로 그대로 반환하고,
      * 아무도 당첨된 적 없으면(맨 뒤 업체의 seq도 null) 제외할 "최근 당첨 업체"가 없으므로 그대로 반환한다.
      */
-    private List<Partner> excludeMostRecentlyAssigned(List<Partner> activePartnersSortedAsc) {
-        if (activePartnersSortedAsc.size() <= 1) {
-            return activePartnersSortedAsc;
+    private List<Partner> excludeMostRecentlyAssigned(List<Partner> availablePartnersSortedAsc) {
+        if (availablePartnersSortedAsc.size() <= 1) {
+            return availablePartnersSortedAsc;
         }
 
-        Partner mostRecentlyAssigned = activePartnersSortedAsc.get(activePartnersSortedAsc.size() - 1);
+        Partner mostRecentlyAssigned = availablePartnersSortedAsc.get(availablePartnersSortedAsc.size() - 1);
         if (mostRecentlyAssigned.getLastAssignedSeq() == null) {
-            return activePartnersSortedAsc;
+            return availablePartnersSortedAsc;
         }
 
-        return activePartnersSortedAsc.stream()
+        return availablePartnersSortedAsc.stream()
                 .filter(partner -> partner != mostRecentlyAssigned)
                 .toList();
     }
