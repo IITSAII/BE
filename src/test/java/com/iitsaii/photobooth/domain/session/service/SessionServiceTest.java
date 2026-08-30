@@ -56,6 +56,17 @@ class SessionServiceTest {
             verify(sessionRepository).save(any(Session.class));
         }
 
+        @Test
+        @DisplayName("PAYMENT 단계 타임아웃(stepExpiresAt)을 설정한다")
+        void setsPaymentStepTimeout() {
+            org.mockito.ArgumentCaptor<Session> captor = org.mockito.ArgumentCaptor.forClass(Session.class);
+
+            sessionService.createSession(4);
+
+            verify(sessionRepository).save(captor.capture());
+            assertThat(captor.getValue().getStepExpiresAt()).isAfter(LocalDateTime.now());
+        }
+
         @ParameterizedTest
         @DisplayName("허용되지 않은 수량이면 INVALID_QUANTITY 예외를 던진다")
         @ValueSource(ints = {1, 3, 5, 7, 0, -1})
@@ -93,6 +104,18 @@ class SessionServiceTest {
                     .isInstanceOf(CustomException.class)
                     .extracting(e -> ((CustomException) e).getErrorCode())
                     .isEqualTo(SessionErrorCode.SESSION_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("PAYMENT 단계 타임아웃이 지났으면 조회 시점에 EXPIRED로 전환한다")
+        void expiresSessionWhenPaymentStepTimedOut() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            session.advanceTo(SessionStep.PAYMENT, LocalDateTime.now().minusMinutes(1));
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+
+            SessionStatusResponse response = sessionService.getStatus("sess_abc123");
+
+            assertThat(response.status()).isEqualTo(SessionStatus.EXPIRED.name());
         }
     }
 

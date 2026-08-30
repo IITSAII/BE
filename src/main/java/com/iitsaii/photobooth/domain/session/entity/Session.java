@@ -1,5 +1,6 @@
 package com.iitsaii.photobooth.domain.session.entity;
 
+import com.iitsaii.photobooth.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -24,15 +25,11 @@ import org.hibernate.annotations.CreationTimestamp;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "sessions")
-public class Session {
+public class Session extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    /** 이번 회차에 랜덤 당첨된 제휴 업체 (magazines.id 참조) */
-    @Column(name = "magazine_id")
-    private Long magazineId;
+    /** 이번 회차에 랜덤 당첨된 제휴 업체 (partners.id 참조) */
+    @Column(name = "partner_id")
+    private Long partnerId;
 
     /** 외부(토스 등) 연동 및 프론트 참조용 공개 식별자. FK로는 쓰이지 않음 */
     @Column(name = "session_id", length = 64, nullable = false, unique = true)
@@ -69,10 +66,6 @@ public class Session {
     @Column(name = "coupon_expires_at")
     private LocalDateTime couponExpiresAt;
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
     /** 동시 요청으로 인한 단계 전이 덮어쓰기를 막기 위한 낙관적 락 버전 */
     @Version
     @Column(nullable = false)
@@ -100,11 +93,41 @@ public class Session {
         advanceTo(SessionStep.CAPTURE, nextStepExpiresAt);
     }
 
+    /** 결제 승인 완료 처리. 결제 상태로 전환하고 RELATIONSHIP 단계로 진입시킨다. */
+    public void completePayment(LocalDateTime nextStepExpiresAt) {
+        markPaid();
+        advanceTo(SessionStep.RELATIONSHIP, nextStepExpiresAt);
+    }
+
+    /**
+     * 결제 확정 시 랜덤 배정된 제휴 업체와 쿠폰 사용 만료 시각을 기록한다.
+     * couponExpiresAt은 촬영일(=결제 확정일) 다음날 23:59:59로 계산해서 넘겨받는다.
+     * 쿠폰 자체(도장 사용 여부)는 이 서비스가 아니라 방문 업체가 관리하며, 여기서는 만료 기준 시각만 보관한다.
+     */
+    public void assignPartner(Long partnerId, LocalDateTime couponExpiresAt) {
+        this.partnerId = partnerId;
+        this.couponExpiresAt = couponExpiresAt;
+    }
+
     public void markPaid() {
         this.status = SessionStatus.PAID;
     }
 
     public void markExpired() {
         this.status = SessionStatus.EXPIRED;
+    }
+
+    /**
+     * PAYMENT 단계 타임아웃을 지연 평가(lazy)로 처리한다. 별도 배치/스케줄러 없이,
+     * 세션에 접근하는 시점(상태 조회, 결제 승인 시도 등)마다 이 메서드로 만료 여부를 확인한다.
+     * 결제는 기본값으로 대체 진행할 수 없는 단계라, 시간이 지나면 세션을 종료(EXPIRED)한다.
+     */
+    public void expireIfPaymentTimedOut(LocalDateTime now) {
+        if (currentStep == SessionStep.PAYMENT
+                && status != SessionStatus.EXPIRED
+                && stepExpiresAt != null
+                && now.isAfter(stepExpiresAt)) {
+            markExpired();
+        }
     }
 }
