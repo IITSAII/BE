@@ -10,9 +10,11 @@ import org.springframework.stereotype.Repository;
 public interface PartnerRepository extends JpaRepository<Partner, Long> {
 
     /**
-     * 활성 업체를 최근 당첨 순번(오름차순)으로 조회한다.
-     * MySQL에서 NULL은 오름차순 정렬 시 가장 앞에 오므로, 한 번도 당첨되지 않은 업체가 최우선으로 조회된다.
+     * 활성 업체를 최근 당첨 순번(오름차순, NULL 우선)으로 조회한다.
+     * PostgreSQL은 ASC 정렬 시 NULL이 기본적으로 맨 뒤에 오므로 NULLS FIRST를 명시해야
+     * 한 번도 당첨되지 않은 업체가 맨 앞에 오고, 가장 최근 당첨된 업체가 항상 맨 뒤에 오는 것을 보장한다.
      */
+    @Query("SELECT p FROM Partner p WHERE p.active = true ORDER BY p.lastAssignedSeq ASC NULLS FIRST")
     List<Partner> findByActiveTrueOrderByLastAssignedSeqAsc();
 
     /** 다음 당첨 순번 발급을 위해 현재까지 부여된 최대 순번을 조회한다. 아무도 당첨된 적 없으면 null. */
