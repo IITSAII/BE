@@ -51,7 +51,7 @@ com.iitsaii.photobooth
     ├── payment   # 결제
     ├── photo     # 촬영/선택 이미지
     ├── printjob  # 인쇄 작업
-    └── magazine  # 제휴 업체 및 쿠폰
+    └── partner   # 협력 업체 및 쿠폰
 ```
 
 각 도메인 패키지는 `controller` / `service` / `repository` / `entity` / `dto` 레이어로 구성되며,

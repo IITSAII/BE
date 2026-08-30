@@ -1,6 +1,7 @@
 package com.iitsaii.photobooth.domain.session.controller;
 
 import com.iitsaii.photobooth.global.common.CommonResponse;
+import com.iitsaii.photobooth.domain.partner.dto.PartnerResponse;
 import com.iitsaii.photobooth.domain.session.dto.SessionCreateRequest;
 import com.iitsaii.photobooth.domain.session.dto.SessionCreateResponse;
 import com.iitsaii.photobooth.domain.session.dto.SessionRelationshipRequest;
@@ -90,5 +91,25 @@ public class SessionController {
             @RequestBody SessionRelationshipRequest request
     ) {
         return CommonResponse.ok(sessionService.chooseRelationship(sessionId, request.relationshipType()));
+    }
+
+    @Operation(
+            summary = "배정된 제휴 업체 조회",
+            description = """
+                    결제 확정 시 랜덤 배정된 제휴 업체 정보를 조회한다.
+                    - 결제가 확정되기 전(PAYMENT 단계)에는 아직 배정된 업체가 없어 404가 반환된다.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 세션이거나(`SessionErrorCode.SESSION_NOT_FOUND`) "
+                    + "아직 업체가 배정되지 않음(`SessionErrorCode.PARTNER_NOT_ASSIGNED`)"),
+    })
+    @GetMapping("/{sessionId}/partner")
+    public CommonResponse<PartnerResponse> getAssignedPartner(
+            @Parameter(description = "세션의 공개 식별자", example = "sess_18f65b95c4fb")
+            @PathVariable String sessionId
+    ) {
+        return CommonResponse.ok(sessionService.getAssignedPartner(sessionId));
     }
 }

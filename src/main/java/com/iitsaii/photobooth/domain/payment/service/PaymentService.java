@@ -6,6 +6,7 @@ import com.iitsaii.photobooth.domain.payment.dto.TossConfirmResponse;
 import com.iitsaii.photobooth.domain.payment.entity.Payment;
 import com.iitsaii.photobooth.domain.payment.error.PaymentErrorCode;
 import com.iitsaii.photobooth.domain.payment.repository.PaymentRepository;
+import com.iitsaii.photobooth.domain.partner.service.PartnerService;
 import com.iitsaii.photobooth.domain.session.dto.SessionStatusResponse;
 import com.iitsaii.photobooth.domain.session.entity.Session;
 import com.iitsaii.photobooth.domain.session.entity.SessionStatus;
@@ -38,6 +39,7 @@ public class PaymentService {
     private final SessionRepository sessionRepository;
     private final PaymentRepository paymentRepository;
     private final TossPaymentClient tossPaymentClient;
+    private final PartnerService partnerService;
 
     /**
      * 결제 승인. orderId는 별도 발급하지 않고 Session.sessionId를 그대로 사용한다.
@@ -114,6 +116,10 @@ public class PaymentService {
         }
 
         session.completePayment(now.plus(RELATIONSHIP_STEP_TIMEOUT));
+
+        // 실패해도 결제는 이미 외부(토스)에서 승인되어 되돌릴 수 없으므로 이 트랜잭션을 막지 않는다.
+        // 이후 세션 조회 시점(SessionService.getStatus)에 배정을 다시 시도한다.
+        partnerService.assignPartnerToSession(session);
 
         return SessionStatusResponse.from(session);
     }

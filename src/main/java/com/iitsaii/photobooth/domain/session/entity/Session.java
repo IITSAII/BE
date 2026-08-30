@@ -27,9 +27,9 @@ import org.hibernate.annotations.CreationTimestamp;
 @Table(name = "sessions")
 public class Session extends BaseEntity {
 
-    /** 이번 회차에 랜덤 당첨된 제휴 업체 (magazines.id 참조) */
-    @Column(name = "magazine_id")
-    private Long magazineId;
+    /** 이번 회차에 랜덤 당첨된 제휴 업체 (partners.id 참조) */
+    @Column(name = "partner_id")
+    private Long partnerId;
 
     /** 외부(토스 등) 연동 및 프론트 참조용 공개 식별자. FK로는 쓰이지 않음 */
     @Column(name = "session_id", length = 64, nullable = false, unique = true)
@@ -97,6 +97,16 @@ public class Session extends BaseEntity {
     public void completePayment(LocalDateTime nextStepExpiresAt) {
         markPaid();
         advanceTo(SessionStep.RELATIONSHIP, nextStepExpiresAt);
+    }
+
+    /**
+     * 결제 확정 시 랜덤 배정된 제휴 업체와 쿠폰 사용 만료 시각을 기록한다.
+     * couponExpiresAt은 촬영일(=결제 확정일) 다음날 23:59:59로 계산해서 넘겨받는다.
+     * 쿠폰 자체(도장 사용 여부)는 이 서비스가 아니라 방문 업체가 관리하며, 여기서는 만료 기준 시각만 보관한다.
+     */
+    public void assignPartner(Long partnerId, LocalDateTime couponExpiresAt) {
+        this.partnerId = partnerId;
+        this.couponExpiresAt = couponExpiresAt;
     }
 
     public void markPaid() {
