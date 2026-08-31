@@ -59,6 +59,19 @@ jobs:
           target: ${{ secrets.EC2_DEPLOY_PATH }}
           strip_components: 0
 
+      # 필수 환경변수(AWS_*, DB_* 등)가 EC2에 하나라도 빠져 있으면 여기서 먼저 실패시켜,
+      # 앱 컨테이너가 크래시 루프에 빠지기 전에 배포 단계에서 걸러낸다.
+      - name: Validate compose config
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ secrets.EC2_DEPLOY_PATH }}
+            docker compose -f docker-compose-prod.yml config --quiet
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.0
         with:
