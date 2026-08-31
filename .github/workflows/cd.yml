@@ -40,8 +40,25 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    permissions: {}
+    permissions:
+      contents: read
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # docker-compose-prod.yml은 EC2에 별도로 올려둔 파일이라, 이미지만 pull해서는 설정 변경이
+      # 반영되지 않는다. 매 배포마다 저장소의 최신 버전으로 덮어써서 EC2와 동기화를 강제한다.
+      - name: Sync deploy config to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "docker-compose-prod.yml"
+          target: ${{ secrets.EC2_DEPLOY_PATH }}
+          strip_components: 0
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.0
         with:
