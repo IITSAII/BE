@@ -40,8 +40,43 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    permissions: {}
+    permissions:
+      contents: read
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # docker-compose-prod.yml은 EC2에 별도로 올려둔 파일이라, 이미지만 pull해서는 설정 변경이
+      # 반영되지 않는다. 운영 경로를 바로 덮어쓰지 않고 /tmp에 받아서, 검증을 통과한 파일만
+      # 운영 경로로 교체한다 (검증 실패로 배포가 중단돼도 운영 경로의 파일은 항상 유효한 상태 유지).
+      - name: Sync deploy config to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "docker-compose-prod.yml"
+          target: "/tmp"
+          strip_components: 0
+
+      # 필수 환경변수(AWS_*, DB_* 등)가 EC2에 하나라도 빠져 있으면 여기서 먼저 실패시켜,
+      # 앱 컨테이너가 크래시 루프에 빠지기 전에 배포 단계에서 걸러낸다.
+      # 검증 통과한 경우에만 운영 경로의 파일을 교체한다.
+      - name: Validate and swap compose config
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            # docker compose는 .env를 실행 위치(cwd) 기준으로 찾으므로, EC2_DEPLOY_PATH로 이동한
+            # 상태에서 -f로 /tmp의 신규 파일을 가리켜 검증한다.
+            cd ${{ secrets.EC2_DEPLOY_PATH }}
+            docker compose -f /tmp/docker-compose-prod.yml config --quiet
+            mv /tmp/docker-compose-prod.yml docker-compose-prod.yml
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.0
         with:
