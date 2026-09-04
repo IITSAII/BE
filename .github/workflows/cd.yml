@@ -71,11 +71,12 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            # docker compose는 .env를 실행 위치(cwd) 기준으로 찾으므로, EC2_DEPLOY_PATH로 이동한
-            # 상태에서 -f로 /tmp의 신규 파일을 가리켜 검증한다.
-            cd ${{ secrets.EC2_DEPLOY_PATH }}
-            docker compose -f /tmp/docker-compose-prod.yml config --quiet
-            mv /tmp/docker-compose-prod.yml docker-compose-prod.yml
+            # docker compose는 .env를 "cwd"가 아니라 "-f로 지정한 compose 파일이 위치한 디렉터리"
+            # 기준으로 찾는다. -f가 /tmp를 가리키면 .env도 /tmp에서 찾으려 해서 전부 빈 값으로
+            # 처리되므로, --project-directory로 .env 위치(EC2_DEPLOY_PATH)를 명시해야 한다.
+            docker compose --project-directory ${{ secrets.EC2_DEPLOY_PATH }} \
+              -f /tmp/docker-compose-prod.yml config --quiet
+            mv /tmp/docker-compose-prod.yml ${{ secrets.EC2_DEPLOY_PATH }}/docker-compose-prod.yml
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.0

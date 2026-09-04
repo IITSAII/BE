@@ -5,6 +5,8 @@ import com.iitsaii.photobooth.domain.printJob.entity.PrintJobStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 
+import java.time.LocalDate;
+
 public class PrintJobResDTO {
 
     @Builder
@@ -42,7 +44,10 @@ public class PrintJobResDTO {
             Integer filterBrightness,
 
             @Schema(description = "인쇄 작업 상태", example = "QUEUED")
-            PrintJobStatus status
+            PrintJobStatus status,
+
+            @Schema(description = "촬영 날짜", example = "2026-09-04")
+            LocalDate capturedAt
     ) {}
 
     @Builder

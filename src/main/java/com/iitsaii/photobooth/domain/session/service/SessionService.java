@@ -42,7 +42,7 @@ public class SessionService {
      * 결제(PAYMENT) 단계 타임아웃. 결제창 진입부터 승인 완료까지 걸리는 시간을 고려한 잠정치이며,
      * 실사용 데이터 확인 후 조정이 필요하다. 이 시간이 지나면 세션은 EXPIRED로 종료되고 재시작해야 한다.
      */
-    private static final Duration PAYMENT_STEP_TIMEOUT = Duration.ofMinutes(5);
+    private static final Duration PAYMENT_STEP_TIMEOUT = Duration.ofSeconds(60);
 
     private final SessionRepository sessionRepository;
     private final PartnerService partnerService;
