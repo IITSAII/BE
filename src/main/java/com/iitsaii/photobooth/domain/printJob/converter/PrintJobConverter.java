@@ -22,6 +22,7 @@ public class PrintJobConverter {
                 .filterBw(printJob.isFilterBw())
                 .filterBrightness(printJob.getFilterBrightness())
                 .status(printJob.getStatus())
+                .capturedAt(printJob.getSession().getCreatedAt().toLocalDate())
                 .build();
     }
 
