@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -20,6 +21,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 /** 토스페이먼츠 결제 승인 API 연동 클라이언트. */
+@Slf4j
 @Component
 public class TossPaymentClient {
 
@@ -80,7 +82,14 @@ public class TossPaymentClient {
             PaymentErrorCode errorCode = e.getStatusCode().is5xxServerError()
                     ? PaymentErrorCode.PAYMENT_GATEWAY_UNAVAILABLE
                     : PaymentErrorCode.PAYMENT_CONFIRM_FAILED;
-            throw new CustomException(errorCode, extractMessage(e));
+            TossErrorResponse tossError = extractErrorResponse(e);
+            log.error("토스 결제 승인 실패. status={}, orderId={}, tossCode={}, tossMessage={}",
+                    e.getStatusCode(), request.orderId(),
+                    tossError != null ? tossError.code() : null,
+                    tossError != null ? tossError.message() : e.getMessage());
+            throw new CustomException(errorCode, hasMessage(tossError)
+                    ? tossError.message()
+                    : PaymentErrorCode.PAYMENT_CONFIRM_FAILED.getMessage());
         }
     }
 
@@ -105,12 +114,15 @@ public class TossPaymentClient {
         }
     }
 
-    private String extractMessage(RestClientResponseException e) {
+    private TossErrorResponse extractErrorResponse(RestClientResponseException e) {
         try {
-            TossErrorResponse errorResponse = e.getResponseBodyAs(TossErrorResponse.class);
-            return errorResponse != null ? errorResponse.message() : PaymentErrorCode.PAYMENT_CONFIRM_FAILED.getMessage();
+            return e.getResponseBodyAs(TossErrorResponse.class);
         } catch (Exception parseFailure) {
-            return PaymentErrorCode.PAYMENT_CONFIRM_FAILED.getMessage();
+            return null;
         }
+    }
+
+    private boolean hasMessage(TossErrorResponse tossError) {
+        return tossError != null && tossError.message() != null && !tossError.message().isBlank();
     }
 }
