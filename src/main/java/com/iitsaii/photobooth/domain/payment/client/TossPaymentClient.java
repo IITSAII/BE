@@ -87,7 +87,7 @@ public class TossPaymentClient {
                     e.getStatusCode(), request.orderId(),
                     tossError != null ? tossError.code() : null,
                     tossError != null ? tossError.message() : e.getMessage());
-            throw new CustomException(errorCode, tossError != null
+            throw new CustomException(errorCode, hasMessage(tossError)
                     ? tossError.message()
                     : PaymentErrorCode.PAYMENT_CONFIRM_FAILED.getMessage());
         }
@@ -120,5 +120,9 @@ public class TossPaymentClient {
         } catch (Exception parseFailure) {
             return null;
         }
+    }
+
+    private boolean hasMessage(TossErrorResponse tossError) {
+        return tossError != null && tossError.message() != null && !tossError.message().isBlank();
     }
 }
