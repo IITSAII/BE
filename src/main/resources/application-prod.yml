@@ -2,6 +2,11 @@ server:
   forward-headers-strategy: framework
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
