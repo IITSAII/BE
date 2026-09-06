@@ -20,6 +20,12 @@ public record PartnerResponse(
         @Schema(description = "실제 쿠폰 혜택 내용", example = "아메리카노 1잔 무료")
         String couponDescription,
 
+        @Schema(description = "배경 이미지 URL")
+        String backgroundImageUrl,
+
+        @Schema(description = "영업 시간", example = "Mon – Thu. PM 14:00 ~ 24:00")
+        String businessHours,
+
         @Schema(description = "인화물 QR/바코드용 세션 갤러리 토큰")
         UUID galleryToken
 ) {
@@ -30,6 +36,8 @@ public record PartnerResponse(
                 partner.getName(),
                 partner.getLocation(),
                 partner.getCouponDescription(),
+                partner.getBackgroundImageUrl(),
+                partner.getBusinessHours(),
                 session.getGalleryToken()
         );
     }
