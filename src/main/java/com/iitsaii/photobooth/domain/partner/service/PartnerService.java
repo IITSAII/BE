@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,8 @@ public class PartnerService {
      * 세션에 업체를 배정한다 (결제 승인 직후, 또는 그때 실패한 세션의 재시도 조회 시점).
      * 활성 업체가 없어 배정에 실패해도 예외를 던지지 않고 로그만 남긴다 - 결제는 이미 외부에서
      * 승인되어 되돌릴 수 없으므로, 배정 실패로 호출부의 흐름(결제 확정, 세션 조회)을 막지 않기 위함.
+     * 동시에 여러 세션이 배정을 시도해 Partner의 assignedCount/eligibleCount 갱신이 충돌해도
+     * (@Version 낙관적 락) 같은 방식으로 실패 처리하고 넘어간다 - 별도 재시도는 하지 않는다.
      * 성공하면 true, 배정 가능한 업체가 없어 실패하면 false를 반환한다.
      */
     @Transactional
@@ -38,25 +41,60 @@ public class PartnerService {
             log.warn("제휴 업체 배정에 실패했습니다. 수동 배정 검토 필요. sessionId={}, errorCode={}",
                     session.getSessionId(), e.getErrorCode(), e);
             return false;
+        } catch (ObjectOptimisticLockingFailureException e) {
+            log.warn("제휴 업체 배정 중 동시 갱신 충돌이 발생했습니다. 수동 배정 검토 필요. sessionId={}",
+                    session.getSessionId(), e);
+            return false;
         }
     }
 
     /**
-     * 노출 가능한(활성이면서 협약이 만료되지 않은) 업체 중 가장 최근에 당첨된 업체 1곳만 후보에서
-     * 제외하고, 나머지 중 하나를 무작위로 뽑아 당첨 순번을 갱신한다.
-     * 특정 업체가 연속으로 당첨되는 상황을 최소화하는 게 목적이다.
+     * 노출 가능한(활성이면서 협약이 만료되지 않은) 업체 중 지금 이 시각에 실제로 영업 중인 업체만
+     * 후보로 추리고, 그중 배정 비율(assignedCount / eligibleCount)이 가장 낮은 업체(들)를 우선한다.
+     * 동률이면 가장 최근에 당첨된 업체 1곳만 제외하고 나머지 중 무작위로 뽑는다.
+     *
+     * 리셋 없이 계속 누적되는 비율을 쓰는 이유: 특정 요일에만 영업하는 업체가 그 요일을 독점해서
+     * 배정 횟수가 일시적으로 몰려도, eligibleCount도 함께 커지므로 비율 자체는 자연히 낮아지지
+     * 않는다. 반대로 영업일이 적어 기회 자체가 적었던 업체는 비율이 낮게 유지되어, 다음 공통
+     * 영업일에 자동으로 우선권을 갖게 된다. 주기적으로 리셋하면 이런 자기 교정이 매번 사라지므로
+     * 리셋하지 않는다.
      */
     @Transactional
     public Partner assignRandomPartner() {
+        return assignRandomPartner(LocalDateTime.now());
+    }
+
+    Partner assignRandomPartner(LocalDateTime now) {
         List<Partner> availablePartners = partnerRepository.findAvailableOrderByLastAssignedSeqAsc();
-        if (availablePartners.isEmpty()) {
+        List<Partner> operatingPartners = availablePartners.stream()
+                .filter(partner -> partner.isOperatingAt(now))
+                .toList();
+        if (operatingPartners.isEmpty()) {
             throw new CustomException(PartnerErrorCode.NO_ACTIVE_PARTNER);
         }
 
-        List<Partner> candidates = excludeMostRecentlyAssigned(availablePartners);
+        // 후보 선정은 반드시 eligibleCount를 올리기 전, 기존 누적 비율로 해야 한다.
+        // 먼저 전부 올려버리면 분모가 다 같이 커져서 비율 순서 자체가 바뀔 수 있다
+        // (예: A=10/11, B=1/1이면 A가 더 낮지만, 먼저 +1하면 A=10/12, B=1/2로 B가 더 낮아짐).
+        List<Partner> lowestRatioPartners = selectLowestRatio(operatingPartners);
+        List<Partner> candidates = excludeMostRecentlyAssigned(lowestRatioPartners);
         Partner selected = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
+
+        operatingPartners.forEach(Partner::recordEligible);
         selected.assignNow(nextAssignedSeq());
+        selected.recordAssigned();
         return selected;
+    }
+
+    /** operatingPartnersSortedAsc 중 배정 비율(assignmentRatio)이 가장 낮은 업체(들)만 남긴다. */
+    private List<Partner> selectLowestRatio(List<Partner> operatingPartnersSortedAsc) {
+        double minRatio = operatingPartnersSortedAsc.stream()
+                .mapToDouble(Partner::assignmentRatio)
+                .min()
+                .orElse(0.0);
+        return operatingPartnersSortedAsc.stream()
+                .filter(partner -> partner.assignmentRatio() == minRatio)
+                .toList();
     }
 
     public Partner getById(Long partnerId) {
