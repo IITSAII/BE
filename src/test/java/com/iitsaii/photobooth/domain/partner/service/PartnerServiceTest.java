@@ -92,6 +92,32 @@ class PartnerServiceTest {
         }
 
         @Test
+        @DisplayName("eligibleCount를 올리기 전, 기존 누적 비율로 후보를 선정한다 (선증가로 비율 역전 방지)")
+        void selectsByRatioBeforeIncrementingEligible() {
+            // A: 10/11 = 0.909..., B: 1/1 = 1.0 → 지금은 A가 더 낮다.
+            // eligibleCount를 먼저 올려버리면 A=10/12=0.833, B=1/2=0.5로 역전되어 B가 뽑히는 버그가 있었다.
+            Partner a = partnerOperating(DayOfWeek.TUESDAY, 15, 20);
+            for (int i = 0; i < 11; i++) {
+                a.recordEligible();
+            }
+            for (int i = 0; i < 10; i++) {
+                a.recordAssigned();
+            }
+
+            Partner b = partnerOperating(DayOfWeek.TUESDAY, 15, 20);
+            b.recordEligible();
+            b.recordAssigned();
+
+            given(partnerRepository.findAvailableOrderByLastAssignedSeqAsc())
+                    .willReturn(List.of(a, b));
+            given(partnerRepository.findMaxAssignedSeq()).willReturn(11L);
+
+            Partner selected = partnerService.assignRandomPartner(TUESDAY_1700);
+
+            assertThat(selected).isEqualTo(a);
+        }
+
+        @Test
         @DisplayName("영업 중인 모든 후보의 eligibleCount를 1씩 증가시키고, 선정된 업체의 assignedCount만 증가시킨다")
         void incrementsEligibleForAllAndAssignedForSelectedOnly() {
             Partner a = partnerOperating(DayOfWeek.TUESDAY, 15, 20);

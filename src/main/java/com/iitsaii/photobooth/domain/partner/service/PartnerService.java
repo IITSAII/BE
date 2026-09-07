@@ -65,11 +65,15 @@ public class PartnerService {
         if (operatingPartners.isEmpty()) {
             throw new CustomException(PartnerErrorCode.NO_ACTIVE_PARTNER);
         }
-        operatingPartners.forEach(Partner::recordEligible);
 
+        // 후보 선정은 반드시 eligibleCount를 올리기 전, 기존 누적 비율로 해야 한다.
+        // 먼저 전부 올려버리면 분모가 다 같이 커져서 비율 순서 자체가 바뀔 수 있다
+        // (예: A=10/11, B=1/1이면 A가 더 낮지만, 먼저 +1하면 A=10/12, B=1/2로 B가 더 낮아짐).
         List<Partner> lowestRatioPartners = selectLowestRatio(operatingPartners);
         List<Partner> candidates = excludeMostRecentlyAssigned(lowestRatioPartners);
         Partner selected = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
+
+        operatingPartners.forEach(Partner::recordEligible);
         selected.assignNow(nextAssignedSeq());
         selected.recordAssigned();
         return selected;
