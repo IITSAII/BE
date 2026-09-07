@@ -2,6 +2,7 @@ package com.iitsaii.photobooth.domain.partner.dto;
 
 import com.iitsaii.photobooth.domain.partner.entity.Partner;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 
 @Schema(description = "매거진 페이지에 노출할 제휴 업체 정보 응답")
 public record PartnerListResponse(
@@ -31,7 +32,13 @@ public record PartnerListResponse(
         String directionUrl,
 
         @Schema(description = "실제 쿠폰 혜택 내용", example = "아메리카노 1잔 무료")
-        String couponDescription
+        String couponDescription,
+
+        @Schema(description = "프로필 이미지 URL")
+        String profileImageUrl,
+
+        @Schema(description = "협약 참가자 이름 목록")
+        List<String> participantNames
 ) {
 
     public static PartnerListResponse from(Partner partner) {
@@ -44,7 +51,9 @@ public record PartnerListResponse(
                 partner.getThumbnailImageUrl(),
                 partner.getImageUrl(),
                 partner.getDirectionUrl(),
-                partner.getCouponDescription()
+                partner.getCouponDescription(),
+                partner.getProfileImageUrl(),
+                partner.getParticipantNames()
         );
     }
 
@@ -61,6 +70,8 @@ public record PartnerListResponse(
                 "세종특별자치시 조치원읍 세종로 2639 홍익대학교 세종캠퍼스",
                 "우리가 만드는 순간, 잇사이",
                 "잇사이는 소중한 사람과의 순간을 사진으로 남기는 포토부스 서비스입니다.",
+                null,
+                null,
                 null,
                 null,
                 null,

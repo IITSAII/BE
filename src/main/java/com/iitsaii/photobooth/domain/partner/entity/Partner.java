@@ -53,6 +53,23 @@ public class Partner extends BaseEntity {
     @Column(name = "coupon_description", length = 200)
     private String couponDescription;
 
+    /** 배경 이미지 (파트너 상세 화면 상단) */
+    @Column(name = "background_image_url", length = 500)
+    private String backgroundImageUrl;
+
+    /** 프로필 이미지 (파트너 상세 화면에서 매장 로고와 별도로 노출) */
+    @Column(name = "profile_image_url", length = 500)
+    private String profileImageUrl;
+
+    /** 협약에 참여한 담당자/참가자 이름 목록 */
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "participant_names", columnDefinition = "text[]")
+    private List<String> participantNames;
+
+    /** 영업 시간 (예: "Mon – Thu. PM 14:00 ~ 24:00") */
+    @Column(name = "business_hours", length = 200)
+    private String businessHours;
+
     /** 업체 증감 시 삭제 대신 비활성화 처리하는 플래그 */
     @Column(name = "is_active", nullable = false)
     private boolean active;
@@ -103,7 +120,11 @@ public class Partner extends BaseEntity {
             String thumbnailImageUrl,
             String imageUrl,
             String directionUrl,
-            String couponDescription
+            String couponDescription,
+            String backgroundImageUrl,
+            String profileImageUrl,
+            List<String> participantNames,
+            String businessHours
     ) {
         Partner partner = new Partner();
         partner.name = name;
@@ -113,6 +134,10 @@ public class Partner extends BaseEntity {
         partner.logoUrl = logoUrl;
         partner.thumbnailImageUrl = thumbnailImageUrl;
         partner.imageUrl = imageUrl;
+        partner.backgroundImageUrl = backgroundImageUrl;
+        partner.profileImageUrl = profileImageUrl;
+        partner.participantNames = participantNames;
+        partner.businessHours = businessHours;
         partner.directionUrl = directionUrl;
         partner.couponDescription = couponDescription;
         partner.active = true;
