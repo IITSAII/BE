@@ -3,6 +3,8 @@ package com.iitsaii.photobooth.domain.partner.entity;
 import com.iitsaii.photobooth.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -86,6 +88,7 @@ public class Partner extends BaseEntity {
     private Long lastAssignedSeq;
 
     /** 영업 요일 목록 (예: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY]). 값이 없으면 배정 후보에서 제외된다. */
+    @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "operating_days", columnDefinition = "text[]")
     private List<DayOfWeek> operatingDays;
