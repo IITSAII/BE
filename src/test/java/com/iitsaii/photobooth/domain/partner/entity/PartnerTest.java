@@ -12,7 +12,8 @@ import org.junit.jupiter.api.Test;
 class PartnerTest {
 
     private Partner newPartner() {
-        return Partner.of("업체", "위치", "부제목", "설명", null, null, null, null, "쿠폰");
+        return Partner.of("업체", "위치", "부제목", "설명", null, null, null, null, "쿠폰",
+                null, null, null, null);
     }
 
     @Nested

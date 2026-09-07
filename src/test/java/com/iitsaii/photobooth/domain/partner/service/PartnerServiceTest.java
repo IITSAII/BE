@@ -32,7 +32,8 @@ class PartnerServiceTest {
     private static final LocalDateTime TUESDAY_1700 = LocalDateTime.of(2026, 9, 8, 17, 0);
 
     private Partner partnerOperating(DayOfWeek day, int openHour, int closeHour) {
-        Partner partner = Partner.of("업체", "위치", "부제목", "설명", null, null, null, null, "쿠폰");
+        Partner partner = Partner.of("업체", "위치", "부제목", "설명", null, null, null, null, "쿠폰",
+                null, null, null, null);
         partner.updateOperatingHours(List.of(day), openHour, closeHour);
         return partner;
     }
