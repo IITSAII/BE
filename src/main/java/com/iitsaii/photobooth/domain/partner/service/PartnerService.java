@@ -42,21 +42,48 @@ public class PartnerService {
     }
 
     /**
-     * 노출 가능한(활성이면서 협약이 만료되지 않은) 업체 중 가장 최근에 당첨된 업체 1곳만 후보에서
-     * 제외하고, 나머지 중 하나를 무작위로 뽑아 당첨 순번을 갱신한다.
-     * 특정 업체가 연속으로 당첨되는 상황을 최소화하는 게 목적이다.
+     * 노출 가능한(활성이면서 협약이 만료되지 않은) 업체 중 지금 이 시각에 실제로 영업 중인 업체만
+     * 후보로 추리고, 그중 배정 비율(assignedCount / eligibleCount)이 가장 낮은 업체(들)를 우선한다.
+     * 동률이면 가장 최근에 당첨된 업체 1곳만 제외하고 나머지 중 무작위로 뽑는다.
+     *
+     * 리셋 없이 계속 누적되는 비율을 쓰는 이유: 특정 요일에만 영업하는 업체가 그 요일을 독점해서
+     * 배정 횟수가 일시적으로 몰려도, eligibleCount도 함께 커지므로 비율 자체는 자연히 낮아지지
+     * 않는다. 반대로 영업일이 적어 기회 자체가 적었던 업체는 비율이 낮게 유지되어, 다음 공통
+     * 영업일에 자동으로 우선권을 갖게 된다. 주기적으로 리셋하면 이런 자기 교정이 매번 사라지므로
+     * 리셋하지 않는다.
      */
     @Transactional
     public Partner assignRandomPartner() {
+        return assignRandomPartner(LocalDateTime.now());
+    }
+
+    Partner assignRandomPartner(LocalDateTime now) {
         List<Partner> availablePartners = partnerRepository.findAvailableOrderByLastAssignedSeqAsc();
-        if (availablePartners.isEmpty()) {
+        List<Partner> operatingPartners = availablePartners.stream()
+                .filter(partner -> partner.isOperatingAt(now))
+                .toList();
+        if (operatingPartners.isEmpty()) {
             throw new CustomException(PartnerErrorCode.NO_ACTIVE_PARTNER);
         }
+        operatingPartners.forEach(Partner::recordEligible);
 
-        List<Partner> candidates = excludeMostRecentlyAssigned(availablePartners);
+        List<Partner> lowestRatioPartners = selectLowestRatio(operatingPartners);
+        List<Partner> candidates = excludeMostRecentlyAssigned(lowestRatioPartners);
         Partner selected = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
         selected.assignNow(nextAssignedSeq());
+        selected.recordAssigned();
         return selected;
+    }
+
+    /** operatingPartnersSortedAsc 중 배정 비율(assignmentRatio)이 가장 낮은 업체(들)만 남긴다. */
+    private List<Partner> selectLowestRatio(List<Partner> operatingPartnersSortedAsc) {
+        double minRatio = operatingPartnersSortedAsc.stream()
+                .mapToDouble(Partner::assignmentRatio)
+                .min()
+                .orElse(0.0);
+        return operatingPartnersSortedAsc.stream()
+                .filter(partner -> partner.assignmentRatio() == minRatio)
+                .toList();
     }
 
     public Partner getById(Long partnerId) {
