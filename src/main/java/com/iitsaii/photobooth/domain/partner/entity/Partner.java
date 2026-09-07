@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -113,6 +114,14 @@ public class Partner extends BaseEntity {
      */
     @Column(name = "eligible_count", nullable = false)
     private int eligibleCount;
+
+    /**
+     * 낙관적 락 버전. assignedCount/eligibleCount가 동시 배정 요청으로 경쟁적으로 갱신될 수 있어
+     * (동시 결제 승인으로 여러 세션이 같은 시점에 배정을 시도하는 경우) 갱신 유실을 막기 위해 사용한다.
+     */
+    @Version
+    @Column(nullable = false)
+    private Long version;
 
     public static Partner of(
             String name,

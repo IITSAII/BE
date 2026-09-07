@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,8 @@ public class PartnerService {
      * 세션에 업체를 배정한다 (결제 승인 직후, 또는 그때 실패한 세션의 재시도 조회 시점).
      * 활성 업체가 없어 배정에 실패해도 예외를 던지지 않고 로그만 남긴다 - 결제는 이미 외부에서
      * 승인되어 되돌릴 수 없으므로, 배정 실패로 호출부의 흐름(결제 확정, 세션 조회)을 막지 않기 위함.
+     * 동시에 여러 세션이 배정을 시도해 Partner의 assignedCount/eligibleCount 갱신이 충돌해도
+     * (@Version 낙관적 락) 같은 방식으로 실패 처리하고 넘어간다 - 별도 재시도는 하지 않는다.
      * 성공하면 true, 배정 가능한 업체가 없어 실패하면 false를 반환한다.
      */
     @Transactional
@@ -37,6 +40,10 @@ public class PartnerService {
         } catch (CustomException e) {
             log.warn("제휴 업체 배정에 실패했습니다. 수동 배정 검토 필요. sessionId={}, errorCode={}",
                     session.getSessionId(), e.getErrorCode(), e);
+            return false;
+        } catch (ObjectOptimisticLockingFailureException e) {
+            log.warn("제휴 업체 배정 중 동시 갱신 충돌이 발생했습니다. 수동 배정 검토 필요. sessionId={}",
+                    session.getSessionId(), e);
             return false;
         }
     }
