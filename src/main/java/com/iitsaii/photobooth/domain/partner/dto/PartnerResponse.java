@@ -8,6 +8,9 @@ import java.util.UUID;
 @Schema(description = "세션에 배정된 제휴 업체 정보 응답")
 public record PartnerResponse(
 
+        @Schema(description = "업체 식별자. GET /api/partners 목록의 id와 매칭해 당첨 업체를 표시할 때 사용한다.", example = "2")
+        Long partnerId,
+
         @Schema(description = "매장 로고 이미지 URL")
         String logoUrl,
 
@@ -32,6 +35,7 @@ public record PartnerResponse(
 
     public static PartnerResponse of(Partner partner, Session session) {
         return new PartnerResponse(
+                partner.getId(),
                 partner.getLogoUrl(),
                 partner.getName(),
                 partner.getLocation(),

@@ -58,6 +58,11 @@ public enum PrintJobErrorCode implements ErrorCode {
             HttpStatus.NO_CONTENT,
             "PRINT404_2",
             "출력 대기 중인 작업이 없습니다."
+    ),
+    PHOTO_VIEW_EXPIRED(
+            HttpStatus.GONE,
+            "PRINT410_1",
+            "사진 조회 기간이 만료되었습니다. 인화물의 QR/바코드로 다시 접근해주세요."
     );
 
     private final HttpStatus httpStatus;

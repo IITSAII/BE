@@ -2,6 +2,7 @@ package com.iitsaii.photobooth.domain.session.repository;
 
 import com.iitsaii.photobooth.domain.session.entity.Session;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -9,4 +10,6 @@ import org.springframework.stereotype.Repository;
 public interface SessionRepository extends JpaRepository<Session, Long> {
 
     Optional<Session> findBySessionId(String sessionId);
+
+    Optional<Session> findByGalleryToken(UUID galleryToken);
 }

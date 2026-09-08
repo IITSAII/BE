@@ -7,6 +7,9 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
 import com.iitsaii.photobooth.global.error.CustomException;
+import com.iitsaii.photobooth.domain.partner.dto.PartnerResponse;
+import com.iitsaii.photobooth.domain.partner.entity.Partner;
+import com.iitsaii.photobooth.domain.partner.service.PartnerService;
 import com.iitsaii.photobooth.domain.session.dto.SessionCreateResponse;
 import com.iitsaii.photobooth.domain.session.dto.SessionStatusResponse;
 import com.iitsaii.photobooth.domain.session.entity.RelationshipType;
@@ -17,6 +20,7 @@ import com.iitsaii.photobooth.domain.session.error.SessionErrorCode;
 import com.iitsaii.photobooth.domain.session.repository.SessionRepository;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -32,6 +36,9 @@ class SessionServiceTest {
 
     @Mock
     private SessionRepository sessionRepository;
+
+    @Mock
+    private PartnerService partnerService;
 
     @InjectMocks
     private SessionService sessionService;
@@ -171,6 +178,85 @@ class SessionServiceTest {
                     .isInstanceOf(CustomException.class)
                     .extracting(e -> ((CustomException) e).getErrorCode())
                     .isEqualTo(SessionErrorCode.SESSION_NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("getAssignedPartner")
+    class GetAssignedPartner {
+
+        @Test
+        @DisplayName("업체가 배정되어 있으면 배정된 업체 정보를 반환한다")
+        void returnsPartnerWhenAssigned() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            session.assignPartner(1L, LocalDateTime.now());
+            Partner partner = Partner.of("업체", "위치", "부제목", "설명", null, null, null, null, "쿠폰",
+                    null, null, null, null);
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+            given(partnerService.getById(1L)).willReturn(partner);
+
+            PartnerResponse response = sessionService.getAssignedPartner("sess_abc123");
+
+            assertThat(response.name()).isEqualTo("업체");
+            assertThat(response.galleryToken()).isEqualTo(session.getGalleryToken());
+        }
+
+        @Test
+        @DisplayName("업체가 배정되지 않았으면 PARTNER_NOT_ASSIGNED 예외를 던진다")
+        void throwsWhenPartnerNotAssigned() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+
+            assertThatThrownBy(() -> sessionService.getAssignedPartner("sess_abc123"))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(SessionErrorCode.PARTNER_NOT_ASSIGNED);
+        }
+    }
+
+    @Nested
+    @DisplayName("getAssignedPartnerByGalleryToken")
+    class GetAssignedPartnerByGalleryToken {
+
+        @Test
+        @DisplayName("업체가 배정되어 있으면 galleryToken으로도 배정된 업체 정보를 반환한다")
+        void returnsPartnerWhenAssigned() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            session.assignPartner(1L, LocalDateTime.now());
+            Partner partner = Partner.of("업체", "위치", "부제목", "설명", null, null, null, null, "쿠폰",
+                    null, null, null, null);
+            UUID galleryToken = session.getGalleryToken();
+            given(sessionRepository.findByGalleryToken(galleryToken)).willReturn(Optional.of(session));
+            given(partnerService.getById(1L)).willReturn(partner);
+
+            PartnerResponse response = sessionService.getAssignedPartnerByGalleryToken(galleryToken);
+
+            assertThat(response.name()).isEqualTo("업체");
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 galleryToken이면 SESSION_NOT_FOUND 예외를 던진다")
+        void throwsWhenGalleryTokenNotFound() {
+            UUID unknownToken = UUID.randomUUID();
+            given(sessionRepository.findByGalleryToken(unknownToken)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> sessionService.getAssignedPartnerByGalleryToken(unknownToken))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(SessionErrorCode.SESSION_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("업체가 배정되지 않았으면 PARTNER_NOT_ASSIGNED 예외를 던진다")
+        void throwsWhenPartnerNotAssigned() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            UUID galleryToken = session.getGalleryToken();
+            given(sessionRepository.findByGalleryToken(galleryToken)).willReturn(Optional.of(session));
+
+            assertThatThrownBy(() -> sessionService.getAssignedPartnerByGalleryToken(galleryToken))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(SessionErrorCode.PARTNER_NOT_ASSIGNED);
         }
     }
 }
