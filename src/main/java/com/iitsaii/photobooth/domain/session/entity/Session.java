@@ -128,7 +128,7 @@ public class Session extends BaseEntity {
 
     /** 사진 열람 가능 기한이 지났는지 여부. sessionId/galleryToken 접근 모두에 동일하게 적용된다. */
     public boolean isPhotoViewExpired(LocalDateTime now) {
-        return photoViewExpiresAt != null && now.isAfter(photoViewExpiresAt);
+        return photoViewExpiresAt != null && !now.isBefore(photoViewExpiresAt);
     }
 
     /**
