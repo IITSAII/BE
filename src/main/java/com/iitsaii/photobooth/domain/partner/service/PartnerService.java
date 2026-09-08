@@ -7,6 +7,7 @@ import com.iitsaii.photobooth.domain.session.entity.Session;
 import com.iitsaii.photobooth.global.error.CustomException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class PartnerService {
 
     private final PartnerRepository partnerRepository;
+
+    /**
+     * 영업 중인 업체가 하나도 없을 때 대신 배정할 업체 이름 (임시 조치, 프론트 테스트 편의 목적).
+     * 정식 정책이 정해지면 제거한다.
+     */
+    private static final Set<String> FALLBACK_PARTNER_NAMES = Set.of("피치못한", "반짝");
 
     /**
      * 세션에 업체를 배정한다 (결제 승인 직후, 또는 그때 실패한 세션의 재시도 조회 시점).
@@ -58,6 +65,11 @@ public class PartnerService {
      * 않는다. 반대로 영업일이 적어 기회 자체가 적었던 업체는 비율이 낮게 유지되어, 다음 공통
      * 영업일에 자동으로 우선권을 갖게 된다. 주기적으로 리셋하면 이런 자기 교정이 매번 사라지므로
      * 리셋하지 않는다.
+     *
+     * TODO: 프론트 테스트 편의를 위한 임시 조치. 지금은 영업 중인 업체가 하나도 없으면
+     * FALLBACK_PARTNER_NAMES(피치못한, 반짝) 중 활성 상태인 업체만 후보로 대신 사용한다
+     * (배정 자체가 막혀 프론트에서 테스트가 안 되는 문제 때문). 정식 정책이 정해지면 이 fallback은
+     * 제거하고 다시 NO_ACTIVE_PARTNER를 던지도록 되돌린다.
      */
     @Transactional
     public Partner assignRandomPartner() {
@@ -69,18 +81,21 @@ public class PartnerService {
         List<Partner> operatingPartners = availablePartners.stream()
                 .filter(partner -> partner.isOperatingAt(now))
                 .toList();
-        if (operatingPartners.isEmpty()) {
+        List<Partner> candidatePool = operatingPartners.isEmpty()
+                ? availablePartners.stream().filter(partner -> FALLBACK_PARTNER_NAMES.contains(partner.getName())).toList()
+                : operatingPartners;
+        if (candidatePool.isEmpty()) {
             throw new CustomException(PartnerErrorCode.NO_ACTIVE_PARTNER);
         }
 
         // 후보 선정은 반드시 eligibleCount를 올리기 전, 기존 누적 비율로 해야 한다.
         // 먼저 전부 올려버리면 분모가 다 같이 커져서 비율 순서 자체가 바뀔 수 있다
         // (예: A=10/11, B=1/1이면 A가 더 낮지만, 먼저 +1하면 A=10/12, B=1/2로 B가 더 낮아짐).
-        List<Partner> lowestRatioPartners = selectLowestRatio(operatingPartners);
+        List<Partner> lowestRatioPartners = selectLowestRatio(candidatePool);
         List<Partner> candidates = excludeMostRecentlyAssigned(lowestRatioPartners);
         Partner selected = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
 
-        operatingPartners.forEach(Partner::recordEligible);
+        candidatePool.forEach(Partner::recordEligible);
         selected.assignNow(nextAssignedSeq());
         selected.recordAssigned();
         return selected;
