@@ -96,6 +96,21 @@ public class SessionService {
     @Transactional
     public PartnerResponse getAssignedPartner(String sessionId) {
         Session session = findBySessionId(sessionId);
+        return toPartnerResponse(session);
+    }
+
+    /**
+     * galleryToken(인화물 QR/바코드)으로 배정된 제휴 업체 정보를 조회한다.
+     * galleryToken 자체는 만료되지 않으므로, sessionId 기반 조회와 달리 시간 제한 없이 계속 조회 가능하다.
+     */
+    @Transactional
+    public PartnerResponse getAssignedPartnerByGalleryToken(UUID galleryToken) {
+        Session session = sessionRepository.findByGalleryToken(galleryToken)
+                .orElseThrow(() -> new CustomException(SessionErrorCode.SESSION_NOT_FOUND));
+        return toPartnerResponse(session);
+    }
+
+    private PartnerResponse toPartnerResponse(Session session) {
         if (session.getPartnerId() == null) {
             throw new CustomException(SessionErrorCode.PARTNER_NOT_ASSIGNED);
         }
