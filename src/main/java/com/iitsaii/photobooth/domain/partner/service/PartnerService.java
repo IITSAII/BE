@@ -66,10 +66,8 @@ public class PartnerService {
      * 영업일에 자동으로 우선권을 갖게 된다. 주기적으로 리셋하면 이런 자기 교정이 매번 사라지므로
      * 리셋하지 않는다.
      *
-     * TODO: 프론트 테스트 편의를 위한 임시 조치. 지금은 영업 중인 업체가 하나도 없으면
-     * FALLBACK_PARTNER_NAMES(피치못한, 반짝) 중 활성 상태인 업체만 후보로 대신 사용한다
-     * (배정 자체가 막혀 프론트에서 테스트가 안 되는 문제 때문). 정식 정책이 정해지면 이 fallback은
-     * 제거하고 다시 NO_ACTIVE_PARTNER를 던지도록 되돌린다.
+     * 영업 중인 업체가 하나도 없으면 FALLBACK_PARTNER_NAMES(피치못한, 반짝) 중 활성 상태인
+     * 업체만 후보로 대신 사용한다 (영업시간 외에도 배정 자체는 막히지 않도록 하는 정책).
      */
     @Transactional
     public Partner assignRandomPartner() {
@@ -84,6 +82,12 @@ public class PartnerService {
         List<Partner> candidatePool = operatingPartners.isEmpty()
                 ? availablePartners.stream().filter(partner -> FALLBACK_PARTNER_NAMES.contains(partner.getName())).toList()
                 : operatingPartners;
+        if (operatingPartners.isEmpty() && candidatePool.size() < FALLBACK_PARTNER_NAMES.size()) {
+            // FALLBACK_PARTNER_NAMES의 업체명이 DB의 실제 이름과 어긋났거나 일부가 비활성/만료된 경우.
+            // 배정 자체는 계속 진행하되(가능한 만큼은 배정), 설정이 어긋났다는 걸 바로 알 수 있도록 남긴다.
+            log.warn("fallback 배정 후보 중 일부를 찾지 못했습니다. expected={}, found={}",
+                    FALLBACK_PARTNER_NAMES, candidatePool.stream().map(Partner::getName).toList());
+        }
         if (candidatePool.isEmpty()) {
             throw new CustomException(PartnerErrorCode.NO_ACTIVE_PARTNER);
         }
