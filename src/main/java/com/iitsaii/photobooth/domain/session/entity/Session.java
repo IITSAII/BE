@@ -118,6 +118,19 @@ public class Session extends BaseEntity {
     }
 
     /**
+     * 최종 인쇄 이미지가 준비된 시점에 sessionId 기반 조회(GET .../print)의 열람 가능 기한을 부여한다.
+     * 이 기한이 지나도 galleryToken으로는 계속 접근할 수 있다 (인화물 QR/바코드는 만료 없이 영구 접근).
+     */
+    public void startPhotoViewWindow(LocalDateTime expiresAt) {
+        this.photoViewExpiresAt = expiresAt;
+    }
+
+    /** sessionId 기반 조회(GET .../print)에서만 사용하는 만료 여부. galleryToken 조회에는 적용하지 않는다. */
+    public boolean isPhotoViewExpired(LocalDateTime now) {
+        return photoViewExpiresAt != null && now.isAfter(photoViewExpiresAt);
+    }
+
+    /**
      * PAYMENT 단계 타임아웃을 지연 평가(lazy)로 처리한다. 별도 배치/스케줄러 없이,
      * 세션에 접근하는 시점(상태 조회, 결제 승인 시도 등)마다 이 메서드로 만료 여부를 확인한다.
      * 결제는 기본값으로 대체 진행할 수 없는 단계라, 시간이 지나면 세션을 종료(EXPIRED)한다.

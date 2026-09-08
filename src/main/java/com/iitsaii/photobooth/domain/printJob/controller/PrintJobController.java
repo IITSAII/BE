@@ -74,12 +74,14 @@ public class PrintJobController {
                     프론트 또는 맥북 프린트 에이전트가 최종 인쇄 정보를 조회한다.
                     - 프레임 선택 및 최종 이미지 업로드가 완료된 세션만 조회할 수 있다.
                     - 최종 4컷 이미지 URL과 프레임/필터 정보를 함께 반환한다.
+                    - 최종 이미지 업로드 시점 기준 열람 기한(24시간)이 있다. 기한이 지나면 GET /api/gallery/{galleryToken}/print로 접근해야 한다.
                     """
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "최종 인쇄 이미지 조회 성공"),
             @ApiResponse(responseCode = "400", description = "최종 인쇄 이미지가 아직 생성되지 않음 (`PrintJobErrorCode.FINAL_IMAGE_NOT_READY`)"),
-            @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)")
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)"),
+            @ApiResponse(responseCode = "410", description = "열람 기한이 지남 (`PrintJobErrorCode.PHOTO_VIEW_EXPIRED`)")
     })
     @GetMapping
     public CommonResponse<PrintJobResDTO.PrintInfo> getPrintInfo(

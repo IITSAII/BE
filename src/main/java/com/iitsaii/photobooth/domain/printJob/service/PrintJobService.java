@@ -34,6 +34,9 @@ public class PrintJobService {
 
     private static final Duration PRINT_STEP_TIMEOUT = Duration.ofSeconds(100);
 
+    /** sessionId 기반 조회(GET .../print)의 열람 가능 기한. 이 기간이 지나도 galleryToken으로는 계속 접근 가능하다. */
+    private static final Duration PHOTO_VIEW_WINDOW = Duration.ofHours(24);
+
     private static final List<String> ALLOWED_IMAGE_TYPES = List.of("image/jpeg", "image/png");
 
     private final SessionRepository sessionRepository;
@@ -91,11 +94,17 @@ public class PrintJobService {
 
         printJob.updateFinalImage(imageUrl);
 
-        session.advanceTo(SessionStep.PRINT, LocalDateTime.now().plus(PRINT_STEP_TIMEOUT));
+        LocalDateTime now = LocalDateTime.now();
+        session.advanceTo(SessionStep.PRINT, now.plus(PRINT_STEP_TIMEOUT));
+        session.startPhotoViewWindow(now.plus(PHOTO_VIEW_WINDOW));
 
         return PrintJobConverter.toUploadFinalImage(printJob);
     }
 
+    /**
+     * sessionId로 최종 인쇄 이미지를 조회한다 (촬영 직후 화면용). PHOTO_VIEW_WINDOW가 지나면
+     * 더 이상 조회할 수 없다 - 인화물의 QR/바코드(galleryToken)로는 계속 접근 가능하다.
+     */
     @Transactional(readOnly = true)
     public PrintJobResDTO.PrintInfo getPrintInfo(String sessionId) {
         Session session = sessionRepository.findBySessionId(sessionId).orElseThrow(() -> new CustomException(SessionErrorCode.SESSION_NOT_FOUND));
@@ -104,6 +113,10 @@ public class PrintJobService {
 
         if (printJob.getFinalImageUrl() == null) {
             throw new CustomException(PrintJobErrorCode.FINAL_IMAGE_NOT_READY);
+        }
+
+        if (session.isPhotoViewExpired(LocalDateTime.now())) {
+            throw new CustomException(PrintJobErrorCode.PHOTO_VIEW_EXPIRED);
         }
 
         return PrintJobConverter.toPrintInfo(printJob);
