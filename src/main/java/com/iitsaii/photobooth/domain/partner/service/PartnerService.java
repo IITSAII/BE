@@ -23,10 +23,7 @@ public class PartnerService {
 
     private final PartnerRepository partnerRepository;
 
-    /**
-     * 영업 중인 업체가 하나도 없을 때 대신 배정할 업체 이름 (임시 조치, 프론트 테스트 편의 목적).
-     * 정식 정책이 정해지면 제거한다.
-     */
+    /** 영업 중인 업체가 하나도 없을 때 대신 배정할 업체 이름. */
     private static final Set<String> FALLBACK_PARTNER_NAMES = Set.of("피치못한", "반짝");
 
     /**
@@ -45,7 +42,9 @@ public class PartnerService {
             session.assignPartner(partner.getId(), couponExpiresAt);
             return true;
         } catch (CustomException e) {
-            log.warn("제휴 업체 배정에 실패했습니다. 수동 배정 검토 필요. sessionId={}, errorCode={}",
+            // fallback(피치못한/반짝)까지 실패했다는 뜻 - 활성 업체 자체가 없거나 fallback 이름이
+            // 잘못됐다는 신호라 흔한 상황이 아니다. 즉시 알아챌 수 있도록 error로 남긴다.
+            log.error("제휴 업체 배정에 실패했습니다. 수동 배정 검토 필요. sessionId={}, errorCode={}",
                     session.getSessionId(), e.getErrorCode(), e);
             return false;
         } catch (ObjectOptimisticLockingFailureException e) {
