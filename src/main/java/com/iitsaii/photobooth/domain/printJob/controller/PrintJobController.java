@@ -74,7 +74,7 @@ public class PrintJobController {
                     프론트 또는 맥북 프린트 에이전트가 최종 인쇄 정보를 조회한다.
                     - 프레임 선택 및 최종 이미지 업로드가 완료된 세션만 조회할 수 있다.
                     - 최종 4컷 이미지 URL과 프레임/필터 정보를 함께 반환한다.
-                    - 최종 이미지 업로드 시점 기준 열람 기한(24시간)이 있다. 기한이 지나면 GET /api/gallery/{galleryToken}/print로 접근해야 한다.
+                    - 최종 이미지 업로드 시점 기준 열람 기한(24시간)이 있다. GET /api/gallery/{galleryToken}/print로 접근해도 동일하게 적용된다.
                     """
     )
     @ApiResponses({

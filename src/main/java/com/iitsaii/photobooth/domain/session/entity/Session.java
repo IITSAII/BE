@@ -118,14 +118,15 @@ public class Session extends BaseEntity {
     }
 
     /**
-     * 최종 인쇄 이미지가 준비된 시점에 sessionId 기반 조회(GET .../print)의 열람 가능 기한을 부여한다.
-     * 이 기한이 지나도 galleryToken으로는 계속 접근할 수 있다 (인화물 QR/바코드는 만료 없이 영구 접근).
+     * 최종 인쇄 이미지가 준비된 시점에 사진 열람 가능 기한을 부여한다.
+     * sessionId로 접근하든 galleryToken(인화물 QR/바코드)으로 접근하든 동일하게 적용된다 -
+     * 만료 없이 접근 가능한 건 갤러리(매거진/쿠폰) 페이지 자체이지, 사진 열람은 아니다.
      */
     public void startPhotoViewWindow(LocalDateTime expiresAt) {
         this.photoViewExpiresAt = expiresAt;
     }
 
-    /** sessionId 기반 조회(GET .../print)에서만 사용하는 만료 여부. galleryToken 조회에는 적용하지 않는다. */
+    /** 사진 열람 가능 기한이 지났는지 여부. sessionId/galleryToken 접근 모두에 동일하게 적용된다. */
     public boolean isPhotoViewExpired(LocalDateTime now) {
         return photoViewExpiresAt != null && now.isAfter(photoViewExpiresAt);
     }

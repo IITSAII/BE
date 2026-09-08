@@ -63,7 +63,7 @@ class PrintJobServiceTest {
 
         @Test
         @DisplayName("열람 기한 전이면 정상 조회된다")
-        void returnsPrintInfoWhenNotExpired() {
+        void returnsPrintInfoWhenNotExpiredBySessionId() {
             Session session = sessionWithFinalImage(LocalDateTime.now().plusHours(1));
             PrintJob printJob = printJobWithFinalImage(session);
             given(sessionRepository.findBySessionId("sess_test")).willReturn(Optional.of(session));
@@ -107,9 +107,9 @@ class PrintJobServiceTest {
     class GetPrintInfoByGalleryToken {
 
         @Test
-        @DisplayName("sessionId 기준 열람 기한이 지났어도 galleryToken으로는 계속 조회된다")
-        void returnsPrintInfoEvenWhenSessionIdViewExpired() {
-            Session session = sessionWithFinalImage(LocalDateTime.now().minusDays(1));
+        @DisplayName("열람 기한 전이면 galleryToken으로도 정상 조회된다")
+        void returnsPrintInfoWhenNotExpired() {
+            Session session = sessionWithFinalImage(LocalDateTime.now().plusHours(1));
             PrintJob printJob = printJobWithFinalImage(session);
             UUID galleryToken = session.getGalleryToken();
             given(sessionRepository.findByGalleryToken(galleryToken)).willReturn(Optional.of(session));
@@ -118,6 +118,21 @@ class PrintJobServiceTest {
             PrintJobResDTO.PrintInfo result = printJobService.getPrintInfoByGalleryToken(galleryToken);
 
             assertThat(result.finalImageUrl()).isEqualTo("https://example.com/final.jpg");
+        }
+
+        @Test
+        @DisplayName("galleryToken 자체는 만료되지 않지만, sessionId 기준 열람 기한이 지났으면 사진 조회는 똑같이 막힌다")
+        void throwsWhenPhotoViewExpiredEvenViaGalleryToken() {
+            Session session = sessionWithFinalImage(LocalDateTime.now().minusDays(1));
+            PrintJob printJob = printJobWithFinalImage(session);
+            UUID galleryToken = session.getGalleryToken();
+            given(sessionRepository.findByGalleryToken(galleryToken)).willReturn(Optional.of(session));
+            given(printJobRepository.findBySession(session)).willReturn(Optional.of(printJob));
+
+            assertThatThrownBy(() -> printJobService.getPrintInfoByGalleryToken(galleryToken))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(PrintJobErrorCode.PHOTO_VIEW_EXPIRED);
         }
 
         @Test
