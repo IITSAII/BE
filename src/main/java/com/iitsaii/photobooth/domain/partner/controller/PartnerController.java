@@ -23,7 +23,7 @@ public class PartnerController {
 
     @Operation(
             summary = "매거진 페이지용 제휴 업체 목록 조회",
-            description = "노출 가능한(active) 제휴 업체 전체 목록을 반환한다. 목록 맨 앞에는 잇사이(우리 서비스) 소개 카드가 고정으로 포함된다."
+            description = "노출 가능한(active) 제휴 업체 전체 목록을 반환한다. 목록 맨 앞에는 잇사이(우리 서비스) 소개 카드가 고정으로 포함되며, 이 카드는 isOurStudio=true, id=null로 구분된다."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),

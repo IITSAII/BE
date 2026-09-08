@@ -32,7 +32,11 @@ class PartnerServiceTest {
     private static final LocalDateTime TUESDAY_1700 = LocalDateTime.of(2026, 9, 8, 17, 0);
 
     private Partner partnerOperating(DayOfWeek day, int openHour, int closeHour) {
-        Partner partner = Partner.of("업체", "위치", "부제목", "설명", null, null, null, null, "쿠폰",
+        return partnerOperating("업체", day, openHour, closeHour);
+    }
+
+    private Partner partnerOperating(String name, DayOfWeek day, int openHour, int closeHour) {
+        Partner partner = Partner.of(name, "위치", "부제목", "설명", null, null, null, null, "쿠폰",
                 null, null, null, null);
         partner.updateOperatingHours(List.of(day), openHour, closeHour);
         return partner;
@@ -43,8 +47,8 @@ class PartnerServiceTest {
     class AssignRandomPartner {
 
         @Test
-        @DisplayName("지금 영업 중인 업체가 하나도 없으면 NO_ACTIVE_PARTNER 예외를 던진다")
-        void throwsWhenNoneOperating() {
+        @DisplayName("영업 중인 업체도, fallback 대상(피치못한/반짝)도 없으면 NO_ACTIVE_PARTNER 예외를 던진다")
+        void throwsWhenNoneOperatingAndNoFallbackCandidate() {
             Partner closedToday = partnerOperating(DayOfWeek.MONDAY, 12, 22);
             given(partnerRepository.findAvailableOrderByLastAssignedSeqAsc()).willReturn(List.of(closedToday));
 
@@ -52,6 +56,34 @@ class PartnerServiceTest {
                     .isInstanceOf(CustomException.class)
                     .extracting(e -> ((CustomException) e).getErrorCode())
                     .isEqualTo(PartnerErrorCode.NO_ACTIVE_PARTNER);
+        }
+
+        @Test
+        @DisplayName("영업 중인 업체가 없으면 피치못한/반짝 중에서만 후보를 고른다")
+        void fallsBackToDesignatedPartnersWhenNoneOperating() {
+            Partner peachmotan = partnerOperating("피치못한", DayOfWeek.MONDAY, 12, 22);
+            Partner banjjak = partnerOperating("반짝", DayOfWeek.MONDAY, 12, 22);
+            Partner others = partnerOperating("마주하다", DayOfWeek.MONDAY, 12, 22);
+            given(partnerRepository.findAvailableOrderByLastAssignedSeqAsc())
+                    .willReturn(List.of(peachmotan, banjjak, others));
+            given(partnerRepository.findMaxAssignedSeq()).willReturn(null);
+
+            Partner selected = partnerService.assignRandomPartner(TUESDAY_1700);
+
+            assertThat(selected).isIn(peachmotan, banjjak);
+            assertThat(others.getEligibleCount()).isZero();
+        }
+
+        @Test
+        @DisplayName("영업 중인 업체가 없고 fallback 대상 중 하나만 있으면 그 업체가 배정된다")
+        void fallsBackToSingleDesignatedPartnerWhenOnlyOneExists() {
+            Partner peachmotan = partnerOperating("피치못한", DayOfWeek.MONDAY, 12, 22);
+            given(partnerRepository.findAvailableOrderByLastAssignedSeqAsc()).willReturn(List.of(peachmotan));
+            given(partnerRepository.findMaxAssignedSeq()).willReturn(null);
+
+            Partner selected = partnerService.assignRandomPartner(TUESDAY_1700);
+
+            assertThat(selected).isEqualTo(peachmotan);
         }
 
         @Test

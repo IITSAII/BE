@@ -7,6 +7,7 @@ import com.iitsaii.photobooth.domain.session.entity.Session;
 import com.iitsaii.photobooth.global.error.CustomException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class PartnerService {
 
     private final PartnerRepository partnerRepository;
+
+    /** 영업 중인 업체가 하나도 없을 때 대신 배정할 업체 이름. */
+    private static final Set<String> FALLBACK_PARTNER_NAMES = Set.of("피치못한", "반짝");
 
     /**
      * 세션에 업체를 배정한다 (결제 승인 직후, 또는 그때 실패한 세션의 재시도 조회 시점).
@@ -38,7 +42,9 @@ public class PartnerService {
             session.assignPartner(partner.getId(), couponExpiresAt);
             return true;
         } catch (CustomException e) {
-            log.warn("제휴 업체 배정에 실패했습니다. 수동 배정 검토 필요. sessionId={}, errorCode={}",
+            // fallback(피치못한/반짝)까지 실패했다는 뜻 - 활성 업체 자체가 없거나 fallback 이름이
+            // 잘못됐다는 신호라 흔한 상황이 아니다. 즉시 알아챌 수 있도록 error로 남긴다.
+            log.error("제휴 업체 배정에 실패했습니다. 수동 배정 검토 필요. sessionId={}, errorCode={}",
                     session.getSessionId(), e.getErrorCode(), e);
             return false;
         } catch (ObjectOptimisticLockingFailureException e) {
@@ -58,6 +64,9 @@ public class PartnerService {
      * 않는다. 반대로 영업일이 적어 기회 자체가 적었던 업체는 비율이 낮게 유지되어, 다음 공통
      * 영업일에 자동으로 우선권을 갖게 된다. 주기적으로 리셋하면 이런 자기 교정이 매번 사라지므로
      * 리셋하지 않는다.
+     *
+     * 영업 중인 업체가 하나도 없으면 FALLBACK_PARTNER_NAMES(피치못한, 반짝) 중 활성 상태인
+     * 업체만 후보로 대신 사용한다 (영업시간 외에도 배정 자체는 막히지 않도록 하는 정책).
      */
     @Transactional
     public Partner assignRandomPartner() {
@@ -69,18 +78,27 @@ public class PartnerService {
         List<Partner> operatingPartners = availablePartners.stream()
                 .filter(partner -> partner.isOperatingAt(now))
                 .toList();
-        if (operatingPartners.isEmpty()) {
+        List<Partner> candidatePool = operatingPartners.isEmpty()
+                ? availablePartners.stream().filter(partner -> FALLBACK_PARTNER_NAMES.contains(partner.getName())).toList()
+                : operatingPartners;
+        if (operatingPartners.isEmpty() && candidatePool.size() < FALLBACK_PARTNER_NAMES.size()) {
+            // FALLBACK_PARTNER_NAMES의 업체명이 DB의 실제 이름과 어긋났거나 일부가 비활성/만료된 경우.
+            // 배정 자체는 계속 진행하되(가능한 만큼은 배정), 설정이 어긋났다는 걸 바로 알 수 있도록 남긴다.
+            log.warn("fallback 배정 후보 중 일부를 찾지 못했습니다. expected={}, found={}",
+                    FALLBACK_PARTNER_NAMES, candidatePool.stream().map(Partner::getName).toList());
+        }
+        if (candidatePool.isEmpty()) {
             throw new CustomException(PartnerErrorCode.NO_ACTIVE_PARTNER);
         }
 
         // 후보 선정은 반드시 eligibleCount를 올리기 전, 기존 누적 비율로 해야 한다.
         // 먼저 전부 올려버리면 분모가 다 같이 커져서 비율 순서 자체가 바뀔 수 있다
         // (예: A=10/11, B=1/1이면 A가 더 낮지만, 먼저 +1하면 A=10/12, B=1/2로 B가 더 낮아짐).
-        List<Partner> lowestRatioPartners = selectLowestRatio(operatingPartners);
+        List<Partner> lowestRatioPartners = selectLowestRatio(candidatePool);
         List<Partner> candidates = excludeMostRecentlyAssigned(lowestRatioPartners);
         Partner selected = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
 
-        operatingPartners.forEach(Partner::recordEligible);
+        candidatePool.forEach(Partner::recordEligible);
         selected.assignNow(nextAssignedSeq());
         selected.recordAssigned();
         return selected;
