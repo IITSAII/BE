@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -117,6 +118,23 @@ public class PrintJobService {
 
         if (session.isPhotoViewExpired(LocalDateTime.now())) {
             throw new CustomException(PrintJobErrorCode.PHOTO_VIEW_EXPIRED);
+        }
+
+        return PrintJobConverter.toPrintInfo(printJob);
+    }
+
+    /**
+     * galleryToken으로 최종 인쇄 이미지를 조회한다 (인화물 QR/바코드용). 만료 없이 항상 접근 가능하다.
+     */
+    @Transactional(readOnly = true)
+    public PrintJobResDTO.PrintInfo getPrintInfoByGalleryToken(UUID galleryToken) {
+        Session session = sessionRepository.findByGalleryToken(galleryToken)
+                .orElseThrow(() -> new CustomException(SessionErrorCode.SESSION_NOT_FOUND));
+
+        PrintJob printJob = printJobRepository.findBySession(session).orElseThrow(() -> new CustomException(PrintJobErrorCode.PRINT_JOB_NOT_FOUND));
+
+        if (printJob.getFinalImageUrl() == null) {
+            throw new CustomException(PrintJobErrorCode.FINAL_IMAGE_NOT_READY);
         }
 
         return PrintJobConverter.toPrintInfo(printJob);
