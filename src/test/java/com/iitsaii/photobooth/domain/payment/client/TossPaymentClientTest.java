@@ -8,6 +8,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import com.iitsaii.photobooth.domain.payment.dto.TossCancelResponse;
 import com.iitsaii.photobooth.domain.payment.dto.TossConfirmRequest;
 import com.iitsaii.photobooth.domain.payment.dto.TossConfirmResponse;
 import com.iitsaii.photobooth.domain.payment.error.PaymentErrorCode;
@@ -58,6 +59,38 @@ class TossPaymentClientTest {
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(PaymentErrorCode.PAYMENT_GATEWAY_UNAVAILABLE);
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("결제 취소 요청 시 paymentKey를 Idempotency-Key 헤더로 함께 보낸다")
+    void sendsIdempotencyKeyHeaderOnCancel() {
+        mockServer.expect(requestTo("https://api.tosspayments.com/v1/payments/payment-key/cancel"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header("Idempotency-Key", "payment-key"))
+                .andRespond(withSuccess(
+                        """
+                        {"paymentKey":"payment-key","orderId":"sess_abc123","status":"CANCELED"}
+                        """,
+                        MediaType.APPLICATION_JSON));
+
+        TossCancelResponse response = tossPaymentClient.cancel("payment-key", "세션 만료로 인한 자동 취소");
+
+        assertThat(response.status()).isEqualTo("CANCELED");
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("결제 취소 요청이 실패하면 PAYMENT_CANCEL_FAILED로 변환한다")
+    void mapsCancelFailureToPaymentCancelFailed() {
+        mockServer.expect(requestTo("https://api.tosspayments.com/v1/payments/payment-key/cancel"))
+                .andExpect(header("Idempotency-Key", "payment-key"))
+                .andRespond(withServerError());
+
+        assertThatThrownBy(() -> tossPaymentClient.cancel("payment-key", "세션 만료로 인한 자동 취소"))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(PaymentErrorCode.PAYMENT_CANCEL_FAILED);
         mockServer.verify();
     }
 }
