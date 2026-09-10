@@ -15,3 +15,5 @@ services:
       AWS_SECRET_KEY: ${AWS_SECRET_KEY:?AWS_SECRET_KEY is required}
       AWS_REGION: ${AWS_REGION:?AWS_REGION is required}
       AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME:?AWS_S3_BUCKET_NAME is required}
+      # 비어 있으면 Sentry SDK가 자동으로 비활성화되므로, 다른 값들과 달리 필수로 강제하지 않는다.
+      SENTRY_DSN: ${SENTRY_DSN:-}
