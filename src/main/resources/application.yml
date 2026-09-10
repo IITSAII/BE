@@ -9,6 +9,10 @@ spring:
       hibernate:
         format_sql: true
 
+cors:
+  # 콤마로 구분된 허용 오리진 목록. 새 도메인 추가 시 코드 수정 없이 이 값(또는 CORS_ALLOWED_ORIGINS 환경변수)만 바꾸면 된다.
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,https://itsai.co.kr,https://www.itsai.co.kr,https://prod.itsai.co.kr}
+
 toss:
   # 토스 샌드박스(테스트) 시크릿 키. 실 계약 전이라 라이브 키가 없고, 테스트 키는 유출돼도 실거래에 영향 없어 기본값으로 둔다.
   # 프로덕션은 docker-compose-prod.yml에서 :?required로 강제하므로 이 기본값의 영향을 받지 않는다.
