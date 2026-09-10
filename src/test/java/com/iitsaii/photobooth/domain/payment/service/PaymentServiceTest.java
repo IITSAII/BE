@@ -3,6 +3,7 @@ package com.iitsaii.photobooth.domain.payment.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -10,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import com.iitsaii.photobooth.domain.payment.client.TossPaymentClient;
 import com.iitsaii.photobooth.domain.payment.dto.TossConfirmResponse;
 import com.iitsaii.photobooth.domain.payment.entity.Payment;
+import com.iitsaii.photobooth.domain.payment.entity.PaymentStatus;
 import com.iitsaii.photobooth.domain.payment.error.PaymentErrorCode;
 import com.iitsaii.photobooth.domain.payment.repository.PaymentRepository;
 import com.iitsaii.photobooth.domain.partner.service.PartnerService;
@@ -20,12 +22,14 @@ import com.iitsaii.photobooth.domain.session.entity.SessionStep;
 import com.iitsaii.photobooth.domain.session.error.SessionErrorCode;
 import com.iitsaii.photobooth.domain.session.repository.SessionRepository;
 import com.iitsaii.photobooth.global.error.CustomException;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -277,6 +281,52 @@ class PaymentServiceTest {
             assertThat(response.currentStep()).isEqualTo(SessionStep.RELATIONSHIP.name());
             verify(tossPaymentClient, never()).confirm(any());
             verify(paymentRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        @DisplayName("승인 왕복 도중 세션이 만료되면 결제를 자동 취소하고 EXPIRED 상태를 반환한다")
+        void cancelsPaymentWhenSessionExpiresDuringConfirmRoundTrip() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+            // 토스 승인 왕복 중(응답을 받는 시점) 세션이 만료된 상황을 재현한다.
+            given(tossPaymentClient.confirm(any())).willAnswer(invocation -> {
+                session.advanceTo(SessionStep.PAYMENT, LocalDateTime.now().minusSeconds(1));
+                return new TossConfirmResponse("pay_key_1", "sess_abc123", "DONE", "카드",
+                        OffsetDateTime.now(), 6000L);
+            });
+
+            SessionStatusResponse response = paymentService.confirm("sess_abc123", "pay_key_1", 6000);
+
+            assertThat(response.status()).isEqualTo(SessionStatus.EXPIRED.name());
+            verify(tossPaymentClient).cancel(eq("pay_key_1"), any());
+            verify(partnerService, never()).assignPartnerToSession(any());
+
+            ArgumentCaptor<Payment> paymentCaptor = ArgumentCaptor.forClass(Payment.class);
+            verify(paymentRepository).saveAndFlush(paymentCaptor.capture());
+            assertThat(paymentCaptor.getValue().getStatus()).isEqualTo(PaymentStatus.CANCELED);
+        }
+
+        @Test
+        @DisplayName("승인 왕복 도중 세션 만료로 자동 취소를 시도했으나 토스 취소가 실패해도 예외 없이 EXPIRED를 반환하고, "
+                + "실제로 취소되지 않았으므로 결제 상태는 DONE으로 남긴다")
+        void keepsPaymentDoneWhenAutoCancelFails() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+            given(tossPaymentClient.confirm(any())).willAnswer(invocation -> {
+                session.advanceTo(SessionStep.PAYMENT, LocalDateTime.now().minusSeconds(1));
+                return new TossConfirmResponse("pay_key_1", "sess_abc123", "DONE", "카드",
+                        OffsetDateTime.now(), 6000L);
+            });
+            given(tossPaymentClient.cancel(eq("pay_key_1"), any()))
+                    .willThrow(new CustomException(PaymentErrorCode.PAYMENT_CANCEL_FAILED));
+
+            SessionStatusResponse response = paymentService.confirm("sess_abc123", "pay_key_1", 6000);
+
+            assertThat(response.status()).isEqualTo(SessionStatus.EXPIRED.name());
+
+            ArgumentCaptor<Payment> paymentCaptor = ArgumentCaptor.forClass(Payment.class);
+            verify(paymentRepository).saveAndFlush(paymentCaptor.capture());
+            assertThat(paymentCaptor.getValue().getStatus()).isEqualTo(PaymentStatus.DONE);
         }
     }
 }

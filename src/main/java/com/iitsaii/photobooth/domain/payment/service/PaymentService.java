@@ -36,6 +36,9 @@ public class PaymentService {
      */
     private static final Duration RELATIONSHIP_STEP_TIMEOUT = Duration.ofSeconds(60);
 
+    /** 결제 승인 왕복 중 세션이 만료되어 자동 취소할 때 토스에 전달하는 사유. */
+    private static final String EXPIRED_SESSION_CANCEL_REASON = "결제 승인 처리 중 세션 만료로 인한 자동 취소";
+
     private final SessionRepository sessionRepository;
     private final PaymentRepository paymentRepository;
     private final TossPaymentClient tossPaymentClient;
@@ -105,13 +108,12 @@ public class PaymentService {
         }
 
         // 토스 승인 왕복(타임아웃/재조회 포함, 최대 수십 초) 동안 세션이 만료됐을 수 있다.
-        // 이 시점엔 이미 Toss가 결제를 승인했고 Payment도 저장했으므로, 세션 진행은 막되
-        // 결제 기록은 롤백하지 않는다 - 환불 여부는 운영팀이 이 로그를 보고 수동으로 판단한다.
+        // 이 좁은 구간(수십 초)에는 사용자가 아직 그 자리에 있으므로(환불 정책상 "촬영이 진행되지
+        // 않은" 케이스), 뒤늦게 찾아올 사용자를 걱정할 필요 없이 즉시 자동 취소해도 안전하다.
         LocalDateTime now = LocalDateTime.now();
         session.expireIfPaymentTimedOut(now);
         if (session.getStatus() == SessionStatus.EXPIRED) {
-            log.warn("결제는 승인됐지만 세션이 만료되어 다음 단계로 진행하지 않습니다. "
-                    + "수동 환불 검토 필요. sessionId={}, paymentKey={}", sessionId, response.paymentKey());
+            cancelExpiredPayment(payment, sessionId);
             return SessionStatusResponse.from(session);
         }
 
@@ -122,6 +124,22 @@ public class PaymentService {
         partnerService.assignPartnerToSession(session);
 
         return SessionStatusResponse.from(session);
+    }
+
+    /**
+     * 결제 승인 왕복 도중 세션이 만료됐을 때 즉시 자동 환불(취소) 처리한다.
+     * 토스 취소 자체가 실패하면(네트워크/토스 장애) 사용자 응답(세션 EXPIRED)은 그대로 두되,
+     * Payment 상태는 DONE으로 남겨 운영팀이 로그를 보고 수동으로 재처리할 수 있게 한다 -
+     * 실제로 취소되지 않았는데 우리 쪽 기록만 CANCELED로 바꾸면 안 되기 때문이다.
+     */
+    private void cancelExpiredPayment(Payment payment, String sessionId) {
+        try {
+            tossPaymentClient.cancel(payment.getPaymentKey(), EXPIRED_SESSION_CANCEL_REASON);
+            payment.cancel();
+        } catch (CustomException e) {
+            log.error("결제 승인 후 세션 만료로 자동 취소를 시도했으나 실패했습니다. "
+                    + "수동 환불 검토 필요. sessionId={}, paymentKey={}", sessionId, payment.getPaymentKey(), e);
+        }
     }
 
     /**

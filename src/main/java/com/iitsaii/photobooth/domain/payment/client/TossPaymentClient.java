@@ -1,5 +1,7 @@
 package com.iitsaii.photobooth.domain.payment.client;
 
+import com.iitsaii.photobooth.domain.payment.dto.TossCancelRequest;
+import com.iitsaii.photobooth.domain.payment.dto.TossCancelResponse;
 import com.iitsaii.photobooth.domain.payment.dto.TossConfirmRequest;
 import com.iitsaii.photobooth.domain.payment.dto.TossConfirmResponse;
 import com.iitsaii.photobooth.domain.payment.dto.TossErrorResponse;
@@ -26,6 +28,7 @@ import org.springframework.web.client.RestClientResponseException;
 public class TossPaymentClient {
 
     private static final String CONFIRM_URL = "https://api.tosspayments.com/v1/payments/confirm";
+    private static final String CANCEL_URL = "https://api.tosspayments.com/v1/payments/{paymentKey}/cancel";
     private static final String ORDER_QUERY_URL = "https://api.tosspayments.com/v1/payments/orders/{orderId}";
     private static final String APPROVED_STATUS = "DONE";
     private static final String IDEMPOTENCY_KEY_HEADER = "Idempotency-Key";
@@ -90,6 +93,32 @@ public class TossPaymentClient {
             throw new CustomException(errorCode, hasMessage(tossError)
                     ? tossError.message()
                     : PaymentErrorCode.PAYMENT_CONFIRM_FAILED.getMessage());
+        }
+    }
+
+    /**
+     * 결제를 취소한다. paymentKey를 Idempotency-Key로 함께 보내서, 응답 유실 등으로
+     * 같은 취소 요청이 재시도되더라도 토스 쪽에서 중복 취소가 발생하지 않도록 한다.
+     * 4xx/5xx 구분 없이 {@link PaymentErrorCode#PAYMENT_CANCEL_FAILED}(502)로 변환한다 -
+     * 이 시점엔 이미 결제가 승인된 뒤라 취소 실패도 운영 개입이 필요한 장애 상황으로 취급한다.
+     */
+    public TossCancelResponse cancel(String paymentKey, String cancelReason) {
+        try {
+            return restClient.post()
+                    .uri(CANCEL_URL, paymentKey)
+                    .header(IDEMPOTENCY_KEY_HEADER, paymentKey)
+                    .body(new TossCancelRequest(cancelReason))
+                    .retrieve()
+                    .body(TossCancelResponse.class);
+        } catch (RestClientResponseException e) {
+            TossErrorResponse tossError = extractErrorResponse(e);
+            log.error("토스 결제 취소 실패. status={}, paymentKey={}, tossCode={}, tossMessage={}",
+                    e.getStatusCode(), paymentKey,
+                    tossError != null ? tossError.code() : null,
+                    tossError != null ? tossError.message() : e.getMessage());
+            throw new CustomException(PaymentErrorCode.PAYMENT_CANCEL_FAILED, hasMessage(tossError)
+                    ? tossError.message()
+                    : PaymentErrorCode.PAYMENT_CANCEL_FAILED.getMessage());
         }
     }
 
