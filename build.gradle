@@ -34,8 +34,10 @@ dependencies {
 	implementation platform("software.amazon.awssdk:bom:2.34.0")
 	implementation "software.amazon.awssdk:s3"
 
-	// Spring Boot 3+(Jakarta) 대응 버전. sentry.dsn이 비어있으면 자동으로 비활성화된다.
-	implementation 'io.sentry:sentry-spring-boot-starter-jakarta:7.16.0'
+	// Spring Boot 4 전용 아티팩트. sentry-spring-boot-starter-jakarta는 Spring Boot 3용이라
+	// 이 프로젝트(Spring Boot 4.1.1)에서는 RestClientCustomizer 클래스를 찾지 못해 기동이 실패한다.
+	// sentry.dsn이 비어있으면 자동으로 비활성화된다.
+	implementation 'io.sentry:sentry-spring-boot-4:8.56.0'
 }
 
 tasks.named('test') {
