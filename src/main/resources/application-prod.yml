@@ -20,3 +20,12 @@ spring:
 logging:
   level:
     com.iitsaii.photobooth: info
+
+sentry:
+  # 비어 있으면 Sentry SDK가 자동으로 비활성화된다 (local/dev에는 dsn을 설정하지 않는다).
+  dsn: ${SENTRY_DSN:}
+  environment: prod
+  # 예외는 캡처하되(Sentry.captureException), 요청 트레이싱은 비용/오버헤드 대비 우선순위가 낮아 끈다.
+  traces-sample-rate: 0.0
+  # 요청 헤더/쿠키/IP 등 개인정보를 Sentry로 보내지 않는다.
+  send-default-pii: false

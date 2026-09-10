@@ -33,6 +33,9 @@ dependencies {
 
 	implementation platform("software.amazon.awssdk:bom:2.34.0")
 	implementation "software.amazon.awssdk:s3"
+
+	// Spring Boot 3+(Jakarta) 대응 버전. sentry.dsn이 비어있으면 자동으로 비활성화된다.
+	implementation 'io.sentry:sentry-spring-boot-starter-jakarta:7.16.0'
 }
 
 tasks.named('test') {
