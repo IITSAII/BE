@@ -33,6 +33,7 @@ public class PrintJobConverter {
                 .frameType(printJob.getFrameType())
                 .filterBw(printJob.isFilterBw())
                 .filterBrightness(printJob.getFilterBrightness())
+                .quantity(printJob.getSession().getQuantity())
                 .build();
     }
 }
