@@ -158,15 +158,30 @@ class SessionServiceTest {
         }
 
         @Test
-        @DisplayName("RELATIONSHIP 단계가 아니면 INVALID_STEP 예외를 던진다")
-        void throwsWhenNotInRelationshipStep() {
+        @DisplayName("PAYMENT/RELATIONSHIP 단계가 아니면 INVALID_STEP 예외를 던진다")
+        void throwsWhenNotInPaymentOrRelationshipStep() {
             Session session = Session.of("sess_abc123", 4, 6000);
+            session.advanceTo(SessionStep.CAPTURE, LocalDateTime.now());
             given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
 
             assertThatThrownBy(() -> sessionService.chooseRelationship("sess_abc123", RelationshipType.FRIEND))
                     .isInstanceOf(CustomException.class)
                     .extracting(e -> ((CustomException) e).getErrorCode())
                     .isEqualTo(SessionErrorCode.INVALID_STEP);
+        }
+
+        @Test
+        @DisplayName("[임시] PAYMENT 단계여도 결제 승인 없이 관계를 저장하고 CAPTURE 단계로 전이한다")
+        void advancesToCaptureFromPaymentStepAsTemporaryBypass() {
+            Session session = Session.of("sess_abc123", 4, 6000);
+            given(sessionRepository.findBySessionId("sess_abc123")).willReturn(Optional.of(session));
+
+            SessionStatusResponse response = sessionService.chooseRelationship("sess_abc123", RelationshipType.COUPLE);
+
+            assertThat(response.currentStep()).isEqualTo(SessionStep.CAPTURE.name());
+            assertThat(session.getRelationshipType()).isEqualTo(RelationshipType.COUPLE);
+            assertThat(session.getStatus()).isEqualTo(SessionStatus.PAID);
+            verify(partnerService).assignPartnerToSession(session);
         }
 
         @Test
