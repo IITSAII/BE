@@ -12,6 +12,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
@@ -50,6 +51,16 @@ public class GlobalExceptionHandler {
         log.warn("Method not allowed: {}", e.getMessage());
         return ResponseEntity.status(GlobalErrorCode.METHOD_NOT_ALLOWED.getHttpStatus())
                 .body(CommonResponse.error(GlobalErrorCode.METHOD_NOT_ALLOWED));
+    }
+
+    /**
+     * 존재하지 않는 정적 리소스/경로 요청 (봇, 스캐너, 헬스체크 등이 루트(`/`)나 없는 경로로 보내는
+     * 노이즈성 요청 포함). 우리 코드/의존성 버그가 아니므로 Sentry에는 보내지 않고 조용히 404만 반환한다.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<CommonResponse<Void>> handleNoResourceFound(NoResourceFoundException e) {
+        return ResponseEntity.status(GlobalErrorCode.ENTITY_NOT_FOUND.getHttpStatus())
+                .body(CommonResponse.error(GlobalErrorCode.ENTITY_NOT_FOUND));
     }
 
     @ExceptionHandler(Exception.class)
