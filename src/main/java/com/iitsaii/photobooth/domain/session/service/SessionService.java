@@ -80,7 +80,15 @@ public class SessionService {
     public SessionStatusResponse chooseRelationship(String sessionId, RelationshipType relationshipType) {
         try {
             Session session = findBySessionId(sessionId);
-            if (session.getCurrentStep() != SessionStep.RELATIONSHIP) {
+
+            // TODO: 토스 실 계약 체결 전까지의 임시 조치. 프론트가 인증 코드를 자체 검증한 뒤에만
+            // 이 API를 호출한다는 전제로, PAYMENT 단계에서도 호출을 허용해 결제 승인 없이
+            // RELATIONSHIP로 전진시킨다 (서버는 코드 자체를 검증하지 않는다). 계약 체결 후에는
+            // 아래 if 블록과 이 주석을 반드시 제거하고 RELATIONSHIP 단계만 허용해야 한다.
+            if (session.getCurrentStep() == SessionStep.PAYMENT) {
+                session.completePayment(LocalDateTime.now().plus(CAPTURE_STEP_TIMEOUT));
+                partnerService.assignPartnerToSession(session);
+            } else if (session.getCurrentStep() != SessionStep.RELATIONSHIP) {
                 throw new CustomException(SessionErrorCode.INVALID_STEP);
             }
 
