@@ -27,6 +27,23 @@ public class PartnerService {
     private static final Set<String> FALLBACK_PARTNER_NAMES = Set.of("피치못한", "반짝");
 
     /**
+     * 다른 업체와 영업시간이 겹치는 동안은 후순위로 미루고 싶은 업체 이름. 이 업체(들)는 영업시간
+     * 자체는 실제 영업일(예: 월~금)을 그대로 갖고 있지만, 같은 시각에 이 목록에 없는 업체가 하나라도
+     * 영업 중이면 배정 비율에 LOW_PRIORITY_PENALTY만큼 페널티를 더해 왠만하면 뽑히지 않게 한다.
+     * 완전히 배제하는 건 아니라서, 다른 업체들이 유난히 자주 뽑혀 비율이 크게 오르면 그때는 이
+     * 업체(들)도 뽑힐 수 있다. 이 업체(들)만 영업 중인 시간대(다른 업체가 전부 휴무인 요일)에는
+     * 페널티 없이 정상적으로 후보가 된다.
+     */
+    private static final Set<String> LOW_PRIORITY_PARTNER_NAMES = Set.of("피치못한");
+
+    /**
+     * LOW_PRIORITY_PARTNER_NAMES에 적용하는 배정 비율 페널티. assignmentRatio()는 항상 [0, 1]
+     * 범위라, 다른 업체(들)의 비율이 (그 업체의 실제 비율 + 이 페널티)보다 높아야만 역전되어
+     * 뽑힐 수 있다. 값을 키울수록 더 드물게 뽑히고, 줄일수록 더 자주 뽑힌다.
+     */
+    private static final double LOW_PRIORITY_PENALTY = 0.5;
+
+    /**
      * 세션에 업체를 배정한다 (결제 승인 직후, 또는 그때 실패한 세션의 재시도 조회 시점).
      * 활성 업체가 없어 배정에 실패해도 예외를 던지지 않고 로그만 남긴다 - 결제는 이미 외부에서
      * 승인되어 되돌릴 수 없으므로, 배정 실패로 호출부의 흐름(결제 확정, 세션 조회)을 막지 않기 위함.
@@ -67,6 +84,12 @@ public class PartnerService {
      *
      * 영업 중인 업체가 하나도 없으면 FALLBACK_PARTNER_NAMES(피치못한, 반짝) 중 활성 상태인
      * 업체만 후보로 대신 사용한다 (영업시간 외에도 배정 자체는 막히지 않도록 하는 정책).
+     *
+     * 영업 중인 업체가 있으면, LOW_PRIORITY_PARTNER_NAMES(피치못한)도 다른 업체와 함께 후보
+     * 풀에는 남되(recordEligible은 정상적으로 쌓인다), selectLowestRatio에서 비율 페널티를 받아
+     * 왠만하면 뽑히지 않는다 - 다른 업체와 영업일이 겹치는 요일(화~목 등)에 피치못한이 배정
+     * 기회를 과도하게 가져가지 않도록 하기 위함. 피치못한만 영업 중인 요일(다른 업체가 전부
+     * 휴무)에는 페널티 없이 정상적으로 후보가 된다.
      */
     @Transactional
     public Partner assignRandomPartner() {
@@ -81,6 +104,7 @@ public class PartnerService {
         List<Partner> candidatePool = operatingPartners.isEmpty()
                 ? availablePartners.stream().filter(partner -> FALLBACK_PARTNER_NAMES.contains(partner.getName())).toList()
                 : operatingPartners;
+
         if (operatingPartners.isEmpty() && candidatePool.size() < FALLBACK_PARTNER_NAMES.size()) {
             // FALLBACK_PARTNER_NAMES의 업체명이 DB의 실제 이름과 어긋났거나 일부가 비활성/만료된 경우.
             // 배정 자체는 계속 진행하되(가능한 만큼은 배정), 설정이 어긋났다는 걸 바로 알 수 있도록 남긴다.
@@ -104,15 +128,32 @@ public class PartnerService {
         return selected;
     }
 
-    /** operatingPartnersSortedAsc 중 배정 비율(assignmentRatio)이 가장 낮은 업체(들)만 남긴다. */
-    private List<Partner> selectLowestRatio(List<Partner> operatingPartnersSortedAsc) {
-        double minRatio = operatingPartnersSortedAsc.stream()
-                .mapToDouble(Partner::assignmentRatio)
+    /**
+     * candidatePool 중 실질 배정 비율(effectiveRatio)이 가장 낮은 업체(들)만 남긴다.
+     * LOW_PRIORITY_PARTNER_NAMES가 아닌 업체가 후보 풀에 하나라도 섞여 있으면, LOW_PRIORITY
+     * 업체의 비율에 페널티를 더해 계산한다 (완전 배제는 아니라서, 다른 업체들의 비율이 충분히
+     * 높아지면 그래도 역전되어 뽑힐 수 있다).
+     */
+    private List<Partner> selectLowestRatio(List<Partner> candidatePool) {
+        boolean applyLowPriorityPenalty = candidatePool.stream()
+                .anyMatch(partner -> !LOW_PRIORITY_PARTNER_NAMES.contains(partner.getName()));
+
+        double minEffectiveRatio = candidatePool.stream()
+                .mapToDouble(partner -> effectiveRatio(partner, applyLowPriorityPenalty))
                 .min()
                 .orElse(0.0);
-        return operatingPartnersSortedAsc.stream()
-                .filter(partner -> partner.assignmentRatio() == minRatio)
+
+        return candidatePool.stream()
+                .filter(partner -> effectiveRatio(partner, applyLowPriorityPenalty) == minEffectiveRatio)
                 .toList();
+    }
+
+    private double effectiveRatio(Partner partner, boolean applyLowPriorityPenalty) {
+        double ratio = partner.assignmentRatio();
+        if (applyLowPriorityPenalty && LOW_PRIORITY_PARTNER_NAMES.contains(partner.getName())) {
+            return ratio + LOW_PRIORITY_PENALTY;
+        }
+        return ratio;
     }
 
     public Partner getById(Long partnerId) {
