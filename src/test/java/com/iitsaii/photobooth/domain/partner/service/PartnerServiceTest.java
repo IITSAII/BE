@@ -71,7 +71,29 @@ class PartnerServiceTest {
             Partner selected = partnerService.assignRandomPartner(TUESDAY_1700);
 
             assertThat(selected).isIn(peachmotan, banjjak);
+            assertThat(peachmotan.getEligibleCount()).isEqualTo(1);
+            assertThat(banjjak.getEligibleCount()).isEqualTo(1);
             assertThat(others.getEligibleCount()).isZero();
+        }
+
+        @Test
+        @DisplayName("fallback 상황(아무도 영업 중이 아님)에서는 LOW_PRIORITY 페널티가 적용되지 않는다")
+        void fallbackDoesNotApplyLowPriorityPenalty() {
+            // 페널티(0.5)가 fallback에도 잘못 적용되면, 실제 비율은 피치못한(0.0)이 더 낮은데도
+            // effectiveRatio가 0.5로 올라가 반짝(1/3 ≈ 0.33)에게 역전당한다.
+            Partner peachmotan = partnerOperating("피치못한", DayOfWeek.MONDAY, 12, 22);
+            Partner banjjak = partnerOperating("반짝", DayOfWeek.MONDAY, 12, 22);
+            banjjak.recordEligible();
+            banjjak.recordEligible();
+            banjjak.recordEligible();
+            banjjak.recordAssigned(); // ratio = 1/3 ≈ 0.33
+            given(partnerRepository.findAvailableOrderByLastAssignedSeqAsc())
+                    .willReturn(List.of(peachmotan, banjjak));
+            given(partnerRepository.findMaxAssignedSeq()).willReturn(1L);
+
+            Partner selected = partnerService.assignRandomPartner(TUESDAY_1700);
+
+            assertThat(selected).isEqualTo(peachmotan);
         }
 
         @Test

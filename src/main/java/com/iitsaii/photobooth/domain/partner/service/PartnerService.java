@@ -118,7 +118,7 @@ public class PartnerService {
         // 후보 선정은 반드시 eligibleCount를 올리기 전, 기존 누적 비율로 해야 한다.
         // 먼저 전부 올려버리면 분모가 다 같이 커져서 비율 순서 자체가 바뀔 수 있다
         // (예: A=10/11, B=1/1이면 A가 더 낮지만, 먼저 +1하면 A=10/12, B=1/2로 B가 더 낮아짐).
-        List<Partner> lowestRatioPartners = selectLowestRatio(candidatePool);
+        List<Partner> lowestRatioPartners = selectLowestRatio(candidatePool, !operatingPartners.isEmpty());
         List<Partner> candidates = excludeMostRecentlyAssigned(lowestRatioPartners);
         Partner selected = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
 
@@ -130,12 +130,18 @@ public class PartnerService {
 
     /**
      * candidatePool 중 실질 배정 비율(effectiveRatio)이 가장 낮은 업체(들)만 남긴다.
+     * isOperatingPool이 true이고(=fallback이 아니라 실제로 영업 중인 업체들의 pool이고)
      * LOW_PRIORITY_PARTNER_NAMES가 아닌 업체가 후보 풀에 하나라도 섞여 있으면, LOW_PRIORITY
      * 업체의 비율에 페널티를 더해 계산한다 (완전 배제는 아니라서, 다른 업체들의 비율이 충분히
      * 높아지면 그래도 역전되어 뽑힐 수 있다).
+     *
+     * isOperatingPool이 false인 경우(=아무도 영업 중이지 않아 FALLBACK_PARTNER_NAMES로 대체된
+     * pool)에는 페널티를 적용하지 않는다 - "다른 업체와 영업시간이 겹칠 때"라는 페널티의 전제 자체가
+     * 성립하지 않는 상황이라, 적용하면 피치못한과 반짝 사이의 fallback 로테이션이 반짝 쪽으로
+     * 치우치는 의도치 않은 부작용이 생긴다.
      */
-    private List<Partner> selectLowestRatio(List<Partner> candidatePool) {
-        boolean applyLowPriorityPenalty = candidatePool.stream()
+    private List<Partner> selectLowestRatio(List<Partner> candidatePool, boolean isOperatingPool) {
+        boolean applyLowPriorityPenalty = isOperatingPool && candidatePool.stream()
                 .anyMatch(partner -> !LOW_PRIORITY_PARTNER_NAMES.contains(partner.getName()));
 
         double minEffectiveRatio = candidatePool.stream()
