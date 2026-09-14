@@ -71,7 +71,29 @@ class PartnerServiceTest {
             Partner selected = partnerService.assignRandomPartner(TUESDAY_1700);
 
             assertThat(selected).isIn(peachmotan, banjjak);
+            assertThat(peachmotan.getEligibleCount()).isEqualTo(1);
+            assertThat(banjjak.getEligibleCount()).isEqualTo(1);
             assertThat(others.getEligibleCount()).isZero();
+        }
+
+        @Test
+        @DisplayName("fallback 상황(아무도 영업 중이 아님)에서는 LOW_PRIORITY 페널티가 적용되지 않는다")
+        void fallbackDoesNotApplyLowPriorityPenalty() {
+            // 페널티(0.5)가 fallback에도 잘못 적용되면, 실제 비율은 피치못한(0.0)이 더 낮은데도
+            // effectiveRatio가 0.5로 올라가 반짝(1/3 ≈ 0.33)에게 역전당한다.
+            Partner peachmotan = partnerOperating("피치못한", DayOfWeek.MONDAY, 12, 22);
+            Partner banjjak = partnerOperating("반짝", DayOfWeek.MONDAY, 12, 22);
+            banjjak.recordEligible();
+            banjjak.recordEligible();
+            banjjak.recordEligible();
+            banjjak.recordAssigned(); // ratio = 1/3 ≈ 0.33
+            given(partnerRepository.findAvailableOrderByLastAssignedSeqAsc())
+                    .willReturn(List.of(peachmotan, banjjak));
+            given(partnerRepository.findMaxAssignedSeq()).willReturn(1L);
+
+            Partner selected = partnerService.assignRandomPartner(TUESDAY_1700);
+
+            assertThat(selected).isEqualTo(peachmotan);
         }
 
         @Test
@@ -147,6 +169,54 @@ class PartnerServiceTest {
             Partner selected = partnerService.assignRandomPartner(TUESDAY_1700);
 
             assertThat(selected).isEqualTo(a);
+        }
+
+        @Test
+        @DisplayName("피치못한과 다른 업체가 동시에 영업 중이면 둘 다 후보로 남지만(eligibleCount는 같이 오름), 페널티 때문에 다른 업체가 우선 배정된다")
+        void deprioritizesPeachmotanWhenOtherPartnerAlsoOperating() {
+            Partner peachmotan = partnerOperating("피치못한", DayOfWeek.TUESDAY, 12, 22);
+            Partner other = partnerOperating("마주하다", DayOfWeek.TUESDAY, 15, 20);
+            given(partnerRepository.findAvailableOrderByLastAssignedSeqAsc())
+                    .willReturn(List.of(peachmotan, other));
+            given(partnerRepository.findMaxAssignedSeq()).willReturn(null);
+
+            Partner selected = partnerService.assignRandomPartner(TUESDAY_1700);
+
+            assertThat(selected).isEqualTo(other);
+            // 완전 배제가 아니므로 후보 풀에는 남아 eligibleCount는 같이 오른다.
+            assertThat(peachmotan.getEligibleCount()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("다른 업체의 배정 비율이 페널티보다 충분히 높으면, 겹치는 시간에도 피치못한이 역전되어 뽑힐 수 있다")
+        void selectsPeachmotanDespiteOverlapWhenOthersRatioExceedsPenalty() {
+            Partner peachmotan = partnerOperating("피치못한", DayOfWeek.TUESDAY, 12, 22); // ratio = 0/0 -> 0.0
+            Partner overused = partnerOperating("마주하다", DayOfWeek.TUESDAY, 15, 20);
+            overused.recordEligible();
+            overused.recordAssigned(); // ratio = 1/1 = 1.0, LOW_PRIORITY_PENALTY(0.5)보다 큼
+
+            given(partnerRepository.findAvailableOrderByLastAssignedSeqAsc())
+                    .willReturn(List.of(peachmotan, overused));
+            given(partnerRepository.findMaxAssignedSeq()).willReturn(1L);
+
+            Partner selected = partnerService.assignRandomPartner(TUESDAY_1700);
+
+            assertThat(selected).isEqualTo(peachmotan);
+        }
+
+        @Test
+        @DisplayName("피치못한만 영업 중이면(다른 업체는 전부 휴무) 페널티 없이 정상적으로 배정된다")
+        void selectsPeachmotanWhenItsTheOnlyOneOperating() {
+            Partner peachmotan = partnerOperating("피치못한", DayOfWeek.TUESDAY, 12, 22);
+            Partner other = partnerOperating("마주하다", DayOfWeek.MONDAY, 12, 22);
+            given(partnerRepository.findAvailableOrderByLastAssignedSeqAsc())
+                    .willReturn(List.of(peachmotan, other));
+            given(partnerRepository.findMaxAssignedSeq()).willReturn(null);
+
+            Partner selected = partnerService.assignRandomPartner(TUESDAY_1700);
+
+            assertThat(selected).isEqualTo(peachmotan);
+            assertThat(other.getEligibleCount()).isZero();
         }
 
         @Test
