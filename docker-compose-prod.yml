@@ -5,8 +5,20 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:8080"
+    # EC2 전체 메모리가 약 900MB라 컨테이너에 별도 상한이 없으면 JVM이 계속 커지다가
+    # 리눅스 OOM Killer에 강제 종료되는 일이 반복됐다 (2026-09-10, 09-11, 09-14).
+    # 컨테이너 레벨에서 먼저 상한을 걸어, 문제가 생겨도 호스트의 다른 프로세스(sshd, docker
+    # 데몬 등)가 아니라 이 컨테이너 안에서만 영향이 그치도록 한다.
+    mem_limit: 600m
     environment:
       SPRING_PROFILES_ACTIVE: prod
+      # 컨테이너 mem_limit(600m)보다 여유 있게 낮은 값. 힙+메타스페이스만 제한하면 Direct
+      # Memory(NIO 버퍼, DB 드라이버 등)·Code Cache(JIT)·스레드 스택은 상한이 없어 그만큼
+      # 여유를 안 남겨두면 여전히 OOMKilled 날 수 있으므로 영역별로 상한을 명시해 합산이
+      # 600m를 넘지 않게 한다 (Xmx320 + Metaspace128 + Direct64 + CodeCache64 = 576m).
+      # NativeMemoryTracking은 다음에 OOMKilled가 또 나면 dmesg만으로는 어느 영역이
+      # 범인인지 특정이 안 되므로, 원인 추적용으로 상시 켜둔다.
+      JAVA_OPTS: ${JAVA_OPTS:--Xmx320m -XX:MaxMetaspaceSize=128m -XX:MaxDirectMemorySize=64m -XX:ReservedCodeCacheSize=64m -Xss512k -XX:NativeMemoryTracking=summary}
       DB_URL: ${DB_URL:?DB_URL is required}
       DB_USERNAME: ${DB_USERNAME:?DB_USERNAME is required}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
