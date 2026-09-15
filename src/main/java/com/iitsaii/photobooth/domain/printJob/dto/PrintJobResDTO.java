@@ -67,6 +67,9 @@ public class PrintJobResDTO {
             Boolean filterBw,
 
             @Schema(description = "밝기 조절 값 (-100 ~ 100)", example = "20")
-            Integer filterBrightness
+            Integer filterBrightness,
+
+            @Schema(description = "인쇄 수량", example = "2")
+            Integer quantity
     ) {}
 }

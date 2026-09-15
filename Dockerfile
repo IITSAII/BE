@@ -20,4 +20,7 @@ RUN chown spring:spring app.jar
 USER spring
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# JAVA_OPTS로 힙 크기 등을 주입할 수 있도록 shell form 사용 (exec form은 환경변수 확장이 안 됨).
+# EC2 메모리가 작아(약 900MB) 힙 제한 없이 기본값으로 돌리면 JVM이 시스템 메모리를 다 잡아먹고
+# 리눅스 OOM Killer에 의해 강제 종료되는 문제가 반복됐다 (docker-compose-prod.yml에서 기본값 설정).
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
