@@ -36,7 +36,7 @@ public class SessionService {
      * 촬영 단계(CAPTURE) 타임아웃. 컷당 10초 × 6컷 기준의 잠정치이며,
      * 컷 사이 결과 확인 대기시간은 반영되어 있지 않다. photo 도메인 설계 확정 후 조정이 필요하다.
      */
-    private static final Duration CAPTURE_STEP_TIMEOUT = Duration.ofSeconds(60);
+    private static final Duration CAPTURE_STEP_TIMEOUT = Duration.ofSeconds(90);
 
     /**
      * 결제(PAYMENT) 단계 타임아웃. 결제창 진입부터 승인 완료까지 걸리는 시간을 고려한 잠정치이며,
