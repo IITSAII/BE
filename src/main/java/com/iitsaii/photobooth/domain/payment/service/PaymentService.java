@@ -34,7 +34,7 @@ public class PaymentService {
      * 관계 선택(RELATIONSHIP) 단계 타임아웃. CAPTURE 단계와 마찬가지로 잠정치이며,
      * 프론트 UX 확정 후 조정이 필요하다.
      */
-    private static final Duration RELATIONSHIP_STEP_TIMEOUT = Duration.ofSeconds(60);
+    private static final Duration RELATIONSHIP_STEP_TIMEOUT = Duration.ofSeconds(110);
 
     /** 결제 승인 왕복 중 세션이 만료되어 자동 취소할 때 토스에 전달하는 사유. */
     private static final String EXPIRED_SESSION_CANCEL_REASON = "결제 승인 처리 중 세션 만료로 인한 자동 취소";
