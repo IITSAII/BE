@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "output=$(./gradlew test --console=plain 2>&1); code=$?; if [ $code -ne 0 ]; then reason=$(printf '%s' \"$output\" | tail -n 60 | jq -Rs .); printf '{\"decision\":\"block\",\"reason\":%s}' \"$reason\"; fi",
+            "timeout": 300,
+            "statusMessage": "./gradlew test 실행 중..."
+          }
+        ]
+      }
+    ]
+  }
+}
