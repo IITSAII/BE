@@ -28,7 +28,7 @@ docker compose -f docker-compose-local.yml up -d
 
 실행 후 API 문서는 `http://localhost:8080/swagger-ui/index.html`에서 확인할 수 있습니다.
 
-`application-local.yml`의 DB 접속 정보는 위 `docker-compose-local.yml` 기본값(`localhost:5544`, `photobooth`/`photobooth`)과 일치하도록 되어 있어 별도 `.env` 설정 없이 바로 실행됩니다. 로컬 DB를 다른 포트/계정으로 띄웠다면 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD` 환경변수로 덮어쓸 수 있습니다.
+`application-local.yml`의 DB 접속 정보는 위 `docker-compose-local.yml` 기본값(`localhost:5545`, `photobooth`/`photobooth`)과 일치하도록 되어 있어 별도 `.env` 설정 없이 바로 실행됩니다. 로컬 DB를 다른 포트/계정으로 띄웠다면 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD` 환경변수로 덮어쓸 수 있습니다.
 
 ### 3. 프로파일
 

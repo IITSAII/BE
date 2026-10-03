@@ -20,9 +20,11 @@ toss:
 
 cloud:
   aws:
-    region: ${AWS_REGION}
+    # 로컬/테스트는 S3Client 빈 생성만 통과하면 되고 실제로 호출하지 않아 더미 값으로 기본값을 둔다.
+    # 프로덕션은 docker-compose-prod.yml에서 :?required로 강제하므로 이 기본값의 영향을 받지 않는다.
+    region: ${AWS_REGION:ap-northeast-2}
     credentials:
-      access-key: ${AWS_ACCESS_KEY}
-      secret-key: ${AWS_SECRET_KEY}
+      access-key: ${AWS_ACCESS_KEY:local-dummy-access-key}
+      secret-key: ${AWS_SECRET_KEY:local-dummy-secret-key}
     s3:
-      bucket: ${AWS_S3_BUCKET_NAME}
+      bucket: ${AWS_S3_BUCKET_NAME:local-dummy-bucket}
