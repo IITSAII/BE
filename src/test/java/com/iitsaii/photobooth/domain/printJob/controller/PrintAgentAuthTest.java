@@ -95,6 +95,24 @@ class PrintAgentAuthTest {
     }
 
     @Test
+    @DisplayName("PATCH /print/done - 토큰이 맞으면 완료 처리한다")
+    void doneWithValidToken() throws Exception {
+        mockMvc.perform(patch("/api/sessions/sess_test/print/done").header(TOKEN_HEADER, "test-token"))
+                .andExpect(status().isOk());
+
+        verify(printJobService).completePrint("sess_test");
+    }
+
+    @Test
+    @DisplayName("PATCH /print/failed - 토큰이 맞으면 실패 처리한다")
+    void failedWithValidToken() throws Exception {
+        mockMvc.perform(patch("/api/sessions/sess_test/print/failed").header(TOKEN_HEADER, "test-token"))
+                .andExpect(status().isOk());
+
+        verify(printJobService).failPrint("sess_test");
+    }
+
+    @Test
     @DisplayName("GET /print - FE가 쓰는 조회 API는 토큰 없이 호출할 수 있다")
     void printInfoWithoutToken() throws Exception {
         mockMvc.perform(get("/api/sessions/sess_test/print"))
