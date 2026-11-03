@@ -167,20 +167,57 @@ class PrintJobServiceTest {
             PrintJob printJob = givenPrintJob();
             printJob.markFailed();
 
-            printJobService.retryPrint("sess_test");
+            printJobService.retryPrint("sess_test", false);
 
             assertThat(printJob.getStatus()).isEqualTo(PrintJobStatus.QUEUED);
         }
 
         @Test
-        @DisplayName("PRINTING에 멈춘 작업을 다시 QUEUED로 되돌린다")
-        void requeuesStuckPrintingJob() {
+        @DisplayName("force면 PRINTING에 멈춘 작업을 QUEUED로 되돌린다")
+        void requeuesStuckPrintingJobWithForce() {
             PrintJob printJob = givenPrintJob();
             printJob.markPrinting();
 
-            printJobService.retryPrint("sess_test");
+            printJobService.retryPrint("sess_test", true);
 
             assertThat(printJob.getStatus()).isEqualTo(PrintJobStatus.QUEUED);
+        }
+
+        @Test
+        @DisplayName("force가 아니면 PRINTING 작업은 이중 인쇄 방지를 위해 거부한다")
+        void throwsWhenPrintingWithoutForce() {
+            PrintJob printJob = givenPrintJob();
+            printJob.markPrinting();
+
+            assertThatThrownBy(() -> printJobService.retryPrint("sess_test", false))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(PrintJobErrorCode.INVALID_PRINT_STATUS);
+            assertThat(printJob.getStatus()).isEqualTo(PrintJobStatus.PRINTING);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 세션이면 SESSION_NOT_FOUND 예외를 던진다")
+        void throwsWhenSessionNotFound() {
+            given(sessionRepository.findBySessionId("sess_none")).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> printJobService.retryPrint("sess_none", false))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(SessionErrorCode.SESSION_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("인쇄 작업이 없으면 PRINT_JOB_NOT_FOUND 예외를 던진다")
+        void throwsWhenPrintJobNotFound() {
+            Session session = sessionWithFinalImage(null);
+            given(sessionRepository.findBySessionId("sess_test")).willReturn(Optional.of(session));
+            given(printJobRepository.findBySessionForUpdate(session)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> printJobService.retryPrint("sess_test", false))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(PrintJobErrorCode.PRINT_JOB_NOT_FOUND);
         }
 
         @Test
@@ -189,7 +226,7 @@ class PrintJobServiceTest {
             PrintJob printJob = givenPrintJob();
             printJob.markDone();
 
-            assertThatThrownBy(() -> printJobService.retryPrint("sess_test"))
+            assertThatThrownBy(() -> printJobService.retryPrint("sess_test", false))
                     .isInstanceOf(CustomException.class)
                     .extracting(e -> ((CustomException) e).getErrorCode())
                     .isEqualTo(PrintJobErrorCode.PRINT_ALREADY_DONE);
@@ -200,7 +237,7 @@ class PrintJobServiceTest {
         void throwsWhenAlreadyQueued() {
             givenPrintJob();
 
-            assertThatThrownBy(() -> printJobService.retryPrint("sess_test"))
+            assertThatThrownBy(() -> printJobService.retryPrint("sess_test", false))
                     .isInstanceOf(CustomException.class)
                     .extracting(e -> ((CustomException) e).getErrorCode())
                     .isEqualTo(PrintJobErrorCode.INVALID_PRINT_STATUS);
@@ -215,7 +252,7 @@ class PrintJobServiceTest {
             given(sessionRepository.findBySessionId("sess_test")).willReturn(Optional.of(session));
             given(printJobRepository.findBySessionForUpdate(session)).willReturn(Optional.of(printJob));
 
-            assertThatThrownBy(() -> printJobService.retryPrint("sess_test"))
+            assertThatThrownBy(() -> printJobService.retryPrint("sess_test", false))
                     .isInstanceOf(CustomException.class)
                     .extracting(e -> ((CustomException) e).getErrorCode())
                     .isEqualTo(PrintJobErrorCode.FINAL_IMAGE_NOT_READY);

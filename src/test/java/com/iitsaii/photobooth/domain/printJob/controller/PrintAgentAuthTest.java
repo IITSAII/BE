@@ -80,7 +80,18 @@ class PrintAgentAuthTest {
         mockMvc.perform(post("/api/sessions/sess_test/print/retry").header(TOKEN_HEADER, "test-token"))
                 .andExpect(status().isOk());
 
-        verify(printJobService).retryPrint("sess_test");
+        verify(printJobService).retryPrint("sess_test", false);
+    }
+
+    @Test
+    @DisplayName("POST /print/retry - force=true를 서비스에 전달한다")
+    void retryWithForce() throws Exception {
+        mockMvc.perform(post("/api/sessions/sess_test/print/retry")
+                        .param("force", "true")
+                        .header(TOKEN_HEADER, "test-token"))
+                .andExpect(status().isOk());
+
+        verify(printJobService).retryPrint("sess_test", true);
     }
 
     @Test

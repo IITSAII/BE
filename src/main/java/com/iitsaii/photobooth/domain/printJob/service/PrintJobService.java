@@ -15,6 +15,7 @@ import com.iitsaii.photobooth.domain.session.repository.SessionRepository;
 import com.iitsaii.photobooth.global.error.CustomException;
 import com.iitsaii.photobooth.global.s3.S3Service;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PrintJobService {
@@ -182,9 +184,13 @@ public class PrintJobService {
         printJob.markFailed();
     }
 
-    /** 실패했거나 PRINTING에 멈춘 작업을 다시 인쇄 대기열에 넣는다. 최종 이미지는 S3에 있는 것을 그대로 쓴다. */
+    /**
+     * 실패한 작업을 다시 인쇄 대기열에 넣는다. 최종 이미지는 S3에 있는 것을 그대로 쓴다.
+     * PRINTING은 실제로 인쇄 중일 수 있어 이중 인쇄를 막기 위해 기본으로 거부하고,
+     * 에이전트가 멈춘 것을 확인한 경우에만 force로 되돌린다.
+     */
     @Transactional
-    public void retryPrint(String sessionId) {
+    public void retryPrint(String sessionId, boolean force) {
         Session session = sessionRepository.findBySessionId(sessionId).orElseThrow(() -> new CustomException(SessionErrorCode.SESSION_NOT_FOUND));
 
         PrintJob printJob = printJobRepository.findBySessionForUpdate(session).orElseThrow(() -> new CustomException(PrintJobErrorCode.PRINT_JOB_NOT_FOUND));
@@ -197,11 +203,15 @@ public class PrintJobService {
             throw new CustomException(PrintJobErrorCode.FINAL_IMAGE_NOT_READY);
         }
 
-        if (printJob.getStatus() == PrintJobStatus.QUEUED) {
+        PrintJobStatus previousStatus = printJob.getStatus();
+
+        if (previousStatus == PrintJobStatus.QUEUED
+                || (previousStatus == PrintJobStatus.PRINTING && !force)) {
             throw new CustomException(PrintJobErrorCode.INVALID_PRINT_STATUS);
         }
 
         printJob.markQueued();
+        log.info("재인쇄 요청 처리. sessionId={}, previousStatus={}, force={}", sessionId, previousStatus, force);
     }
 
     @Transactional
