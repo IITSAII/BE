@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.given;
 import com.iitsaii.photobooth.domain.printJob.dto.PrintJobResDTO;
 import com.iitsaii.photobooth.domain.printJob.entity.FrameType;
 import com.iitsaii.photobooth.domain.printJob.entity.PrintJob;
+import com.iitsaii.photobooth.domain.printJob.entity.PrintJobStatus;
 import com.iitsaii.photobooth.domain.printJob.error.PrintJobErrorCode;
 import com.iitsaii.photobooth.domain.printJob.repository.PrintJobRepository;
 import com.iitsaii.photobooth.domain.session.entity.Session;
@@ -145,6 +146,79 @@ class PrintJobServiceTest {
                     .isInstanceOf(CustomException.class)
                     .extracting(e -> ((CustomException) e).getErrorCode())
                     .isEqualTo(SessionErrorCode.SESSION_NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("retryPrint")
+    class RetryPrint {
+
+        private PrintJob givenPrintJob() {
+            Session session = sessionWithFinalImage(null);
+            PrintJob printJob = printJobWithFinalImage(session);
+            given(sessionRepository.findBySessionId("sess_test")).willReturn(Optional.of(session));
+            given(printJobRepository.findBySessionForUpdate(session)).willReturn(Optional.of(printJob));
+            return printJob;
+        }
+
+        @Test
+        @DisplayName("FAILED 작업을 다시 QUEUED로 되돌린다")
+        void requeuesFailedJob() {
+            PrintJob printJob = givenPrintJob();
+            printJob.markFailed();
+
+            printJobService.retryPrint("sess_test");
+
+            assertThat(printJob.getStatus()).isEqualTo(PrintJobStatus.QUEUED);
+        }
+
+        @Test
+        @DisplayName("PRINTING에 멈춘 작업을 다시 QUEUED로 되돌린다")
+        void requeuesStuckPrintingJob() {
+            PrintJob printJob = givenPrintJob();
+            printJob.markPrinting();
+
+            printJobService.retryPrint("sess_test");
+
+            assertThat(printJob.getStatus()).isEqualTo(PrintJobStatus.QUEUED);
+        }
+
+        @Test
+        @DisplayName("이미 완료된 작업이면 PRINT_ALREADY_DONE 예외를 던진다")
+        void throwsWhenAlreadyDone() {
+            PrintJob printJob = givenPrintJob();
+            printJob.markDone();
+
+            assertThatThrownBy(() -> printJobService.retryPrint("sess_test"))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(PrintJobErrorCode.PRINT_ALREADY_DONE);
+        }
+
+        @Test
+        @DisplayName("이미 대기 중인 작업이면 INVALID_PRINT_STATUS 예외를 던진다")
+        void throwsWhenAlreadyQueued() {
+            givenPrintJob();
+
+            assertThatThrownBy(() -> printJobService.retryPrint("sess_test"))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(PrintJobErrorCode.INVALID_PRINT_STATUS);
+        }
+
+        @Test
+        @DisplayName("최종 이미지가 없으면 FINAL_IMAGE_NOT_READY 예외를 던진다")
+        void throwsWhenFinalImageNotReady() {
+            Session session = sessionWithFinalImage(null);
+            PrintJob printJob = PrintJob.of(session, FrameType.DARK, false, 0);
+            printJob.markFailed();
+            given(sessionRepository.findBySessionId("sess_test")).willReturn(Optional.of(session));
+            given(printJobRepository.findBySessionForUpdate(session)).willReturn(Optional.of(printJob));
+
+            assertThatThrownBy(() -> printJobService.retryPrint("sess_test"))
+                    .isInstanceOf(CustomException.class)
+                    .extracting(e -> ((CustomException) e).getErrorCode())
+                    .isEqualTo(PrintJobErrorCode.FINAL_IMAGE_NOT_READY);
         }
     }
 }
