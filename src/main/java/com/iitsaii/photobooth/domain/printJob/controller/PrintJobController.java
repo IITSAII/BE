@@ -102,6 +102,7 @@ public class PrintJobController {
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "인쇄 완료 처리 성공"),
+            @ApiResponse(responseCode = "401", description = "에이전트 토큰이 없거나 틀림 (`GlobalErrorCode.UNAUTHORIZED`)"),
             @ApiResponse(responseCode = "400", description = "이미 완료된 인쇄 작업 (`PrintJobErrorCode.PRINT_ALREADY_DONE`)"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)")
     })
@@ -124,6 +125,7 @@ public class PrintJobController {
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "인쇄 실패 처리 성공"),
+            @ApiResponse(responseCode = "401", description = "에이전트 토큰이 없거나 틀림 (`GlobalErrorCode.UNAUTHORIZED`)"),
             @ApiResponse(responseCode = "400", description = "이미 완료된 인쇄 작업 (`PrintJobErrorCode.PRINT_ALREADY_DONE`)"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)")
     })
