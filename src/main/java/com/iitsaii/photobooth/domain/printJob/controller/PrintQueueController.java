@@ -26,6 +26,7 @@ public class PrintQueueController {
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "인쇄 대기 작업 조회 성공"),
+            @ApiResponse(responseCode = "401", description = "에이전트 토큰이 없거나 틀림 (`GlobalErrorCode.UNAUTHORIZED`)"),
             @ApiResponse(responseCode = "404", description = "인쇄 대기 작업 없음")
     })
     @GetMapping("/api/print/queue")

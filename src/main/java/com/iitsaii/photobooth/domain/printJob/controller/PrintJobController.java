@@ -102,6 +102,7 @@ public class PrintJobController {
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "인쇄 완료 처리 성공"),
+            @ApiResponse(responseCode = "401", description = "에이전트 토큰이 없거나 틀림 (`GlobalErrorCode.UNAUTHORIZED`)"),
             @ApiResponse(responseCode = "400", description = "이미 완료된 인쇄 작업 (`PrintJobErrorCode.PRINT_ALREADY_DONE`)"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)")
     })
@@ -124,6 +125,7 @@ public class PrintJobController {
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "인쇄 실패 처리 성공"),
+            @ApiResponse(responseCode = "401", description = "에이전트 토큰이 없거나 틀림 (`GlobalErrorCode.UNAUTHORIZED`)"),
             @ApiResponse(responseCode = "400", description = "이미 완료된 인쇄 작업 (`PrintJobErrorCode.PRINT_ALREADY_DONE`)"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)")
     })
@@ -133,6 +135,32 @@ public class PrintJobController {
             @PathVariable String sessionId
     ) {
         printJobService.failPrint(sessionId);
+        return CommonResponse.ok();
+    }
+
+    @Operation(
+            summary = "재인쇄 요청",
+            description = """
+                    실패한 인쇄 작업을 다시 인쇄 대기열(QUEUED)에 넣는다.
+                    - X-Agent-Token 헤더가 필요하다.
+                    - PRINTING 작업은 실제로 인쇄 중일 수 있어 기본으로 거부한다. 에이전트가 멈춘 것을 확인한 경우에만 force=true로 되돌린다.
+                    - 수량이 4장 이상이면 일부 용지가 이미 나왔어도 전체를 다시 인쇄한다.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "재인쇄 요청 성공"),
+            @ApiResponse(responseCode = "401", description = "에이전트 토큰이 없거나 틀림 (`GlobalErrorCode.UNAUTHORIZED`)"),
+            @ApiResponse(responseCode = "400", description = "이미 완료됐거나 대기 중인 작업, force 없는 PRINTING 작업, 최종 이미지 없음 (`PrintJobErrorCode.PRINT_ALREADY_DONE`, `INVALID_PRINT_STATUS`, `FINAL_IMAGE_NOT_READY`)"),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)")
+    })
+    @PostMapping("/retry")
+    public CommonResponse<Void> retryPrint(
+            @Parameter(description = "세션의 공개 식별자")
+            @PathVariable String sessionId,
+            @Parameter(description = "PRINTING 작업도 되돌릴지 여부")
+            @RequestParam(defaultValue = "false") boolean force
+    ) {
+        printJobService.retryPrint(sessionId, force);
         return CommonResponse.ok();
     }
 }
