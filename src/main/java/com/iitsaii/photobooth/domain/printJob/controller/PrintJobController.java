@@ -137,4 +137,27 @@ public class PrintJobController {
         printJobService.failPrint(sessionId);
         return CommonResponse.ok();
     }
+
+    @Operation(
+            summary = "재인쇄 요청",
+            description = """
+                    실패했거나 PRINTING에 멈춘 인쇄 작업을 다시 인쇄 대기열(QUEUED)에 넣는다.
+                    - X-Agent-Token 헤더가 필요하다.
+                    - 수량이 4장 이상이면 일부 용지가 이미 나왔어도 전체를 다시 인쇄한다.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "재인쇄 요청 성공"),
+            @ApiResponse(responseCode = "401", description = "에이전트 토큰이 없거나 틀림 (`GlobalErrorCode.UNAUTHORIZED`)"),
+            @ApiResponse(responseCode = "400", description = "이미 완료됐거나 대기 중인 작업, 최종 이미지 없음 (`PrintJobErrorCode.PRINT_ALREADY_DONE`, `INVALID_PRINT_STATUS`, `FINAL_IMAGE_NOT_READY`)"),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 세션 또는 인쇄 작업 (`SessionErrorCode.SESSION_NOT_FOUND`, `PrintJobErrorCode.PRINT_JOB_NOT_FOUND`)")
+    })
+    @PostMapping("/retry")
+    public CommonResponse<Void> retryPrint(
+            @Parameter(description = "세션의 공개 식별자")
+            @PathVariable String sessionId
+    ) {
+        printJobService.retryPrint(sessionId);
+        return CommonResponse.ok();
+    }
 }

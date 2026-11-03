@@ -63,6 +63,10 @@ public class PrintJob extends BaseEntity {
         return printJob;
     }
 
+    public void markQueued() {
+        this.status = PrintJobStatus.QUEUED;
+    }
+
     public void markPrinting() {
         this.status = PrintJobStatus.PRINTING;
     }

@@ -182,6 +182,28 @@ public class PrintJobService {
         printJob.markFailed();
     }
 
+    /** 실패했거나 PRINTING에 멈춘 작업을 다시 인쇄 대기열에 넣는다. 최종 이미지는 S3에 있는 것을 그대로 쓴다. */
+    @Transactional
+    public void retryPrint(String sessionId) {
+        Session session = sessionRepository.findBySessionId(sessionId).orElseThrow(() -> new CustomException(SessionErrorCode.SESSION_NOT_FOUND));
+
+        PrintJob printJob = printJobRepository.findBySessionForUpdate(session).orElseThrow(() -> new CustomException(PrintJobErrorCode.PRINT_JOB_NOT_FOUND));
+
+        if (printJob.getStatus() == PrintJobStatus.DONE) {
+            throw new CustomException(PrintJobErrorCode.PRINT_ALREADY_DONE);
+        }
+
+        if (printJob.getFinalImageUrl() == null) {
+            throw new CustomException(PrintJobErrorCode.FINAL_IMAGE_NOT_READY);
+        }
+
+        if (printJob.getStatus() == PrintJobStatus.QUEUED) {
+            throw new CustomException(PrintJobErrorCode.INVALID_PRINT_STATUS);
+        }
+
+        printJob.markQueued();
+    }
+
     @Transactional
     public PrintJobResDTO.PrintQueue getPrintQueue() {
         PrintJob printJob = printJobRepository.findFirstByStatusAndFinalImageUrlIsNotNullOrderByCreatedAtAsc(PrintJobStatus.QUEUED).orElseThrow(() -> new CustomException(PrintJobErrorCode.NO_PRINT_JOB_IN_QUEUE));
