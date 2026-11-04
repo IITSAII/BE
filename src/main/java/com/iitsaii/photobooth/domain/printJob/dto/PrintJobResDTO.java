@@ -1,5 +1,6 @@
 package com.iitsaii.photobooth.domain.printJob.dto;
 
+import com.iitsaii.photobooth.domain.printJob.entity.FilterType;
 import com.iitsaii.photobooth.domain.printJob.entity.FrameType;
 import com.iitsaii.photobooth.domain.printJob.entity.PrintJobStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -37,6 +38,9 @@ public class PrintJobResDTO {
             @Schema(description = "선택한 프레임 종류", example = "DARK")
             FrameType frameType,
 
+            @Schema(description = "선택한 필터", example = "VINTAGE")
+            FilterType filterType,
+
             @Schema(description = "흑백 필터 적용 여부", example = "false")
             Boolean filterBw,
 
@@ -62,6 +66,9 @@ public class PrintJobResDTO {
 
             @Schema(description = "선택한 프레임 종류", example = "DARK")
             FrameType frameType,
+
+            @Schema(description = "선택한 필터", example = "VINTAGE")
+            FilterType filterType,
 
             @Schema(description = "흑백 필터 적용 여부", example = "false")
             Boolean filterBw,
