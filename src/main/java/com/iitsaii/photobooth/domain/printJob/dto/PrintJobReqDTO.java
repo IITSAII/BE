@@ -1,5 +1,6 @@
 package com.iitsaii.photobooth.domain.printJob.dto;
 
+import com.iitsaii.photobooth.domain.printJob.entity.FilterType;
 import com.iitsaii.photobooth.domain.printJob.entity.FrameType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
@@ -26,8 +27,20 @@ public class PrintJobReqDTO {
             @NotNull(message = "밝기 값은 필수입니다.")
             @Min(-100)
             @Max(100)
-            Integer filterBrightness
-    ) {}
+            Integer filterBrightness,
+
+            @Schema(description = "선택한 필터. 없으면 filterBw로 정한다.", example = "VINTAGE")
+            FilterType filterType
+    ) {
+
+        /** filterType을 보내지 않는 이전 FE도 동작하도록 filterBw로 대체한다. */
+        public FilterType resolvedFilterType() {
+            if (filterType != null) {
+                return filterType;
+            }
+            return filterBw ? FilterType.GRAYSCALE : FilterType.DEFAULT;
+        }
+    }
 
     @Schema(description = "최종 인쇄 이미지 업로드 요청")
     public record UploadFinalImage(

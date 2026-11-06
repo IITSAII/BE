@@ -6,7 +6,7 @@ import com.iitsaii.photobooth.domain.printJob.entity.PrintJob;
 public class PrintJobConverter {
 
     public static PrintJobResDTO.FrameSelect toFrameSelect(PrintJob printJob) {
-        return new PrintJobResDTO.FrameSelect(printJob.getId(), printJob.getFrameType());
+        return new PrintJobResDTO.FrameSelect(printJob.getId(), printJob.getFrameType(), printJob.getFilterType());
     }
 
     public static PrintJobResDTO.UploadFinalImage toUploadFinalImage(PrintJob printJob) {
@@ -19,6 +19,7 @@ public class PrintJobConverter {
         return PrintJobResDTO.PrintInfo.builder()
                 .finalImageUrl(printJob.getFinalImageUrl())
                 .frameType(printJob.getFrameType())
+                .filterType(printJob.getFilterType())
                 .filterBw(printJob.isFilterBw())
                 .filterBrightness(printJob.getFilterBrightness())
                 .status(printJob.getStatus())

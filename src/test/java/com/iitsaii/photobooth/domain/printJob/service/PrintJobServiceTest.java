@@ -3,13 +3,17 @@ package com.iitsaii.photobooth.domain.printJob.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
+import com.iitsaii.photobooth.domain.printJob.dto.PrintJobReqDTO;
 import com.iitsaii.photobooth.domain.printJob.dto.PrintJobResDTO;
+import com.iitsaii.photobooth.domain.printJob.entity.FilterType;
 import com.iitsaii.photobooth.domain.printJob.entity.FrameType;
 import com.iitsaii.photobooth.domain.printJob.entity.PrintJob;
 import com.iitsaii.photobooth.domain.printJob.error.PrintJobErrorCode;
 import com.iitsaii.photobooth.domain.printJob.repository.PrintJobRepository;
 import com.iitsaii.photobooth.domain.session.entity.Session;
+import com.iitsaii.photobooth.domain.session.entity.SessionStep;
 import com.iitsaii.photobooth.domain.session.error.SessionErrorCode;
 import com.iitsaii.photobooth.domain.session.repository.SessionRepository;
 import com.iitsaii.photobooth.global.error.CustomException;
@@ -21,6 +25,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -145,6 +150,90 @@ class PrintJobServiceTest {
                     .isInstanceOf(CustomException.class)
                     .extracting(e -> ((CustomException) e).getErrorCode())
                     .isEqualTo(SessionErrorCode.SESSION_NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("selectFrame")
+    class SelectFrame {
+
+        private PrintJob selectFrame(PrintJobReqDTO.FrameSelect dto) {
+            Session session = sessionWithFinalImage(null);
+            session.advanceTo(SessionStep.FRAME, LocalDateTime.now().plusMinutes(1));
+            given(sessionRepository.findBySessionId("sess_test")).willReturn(Optional.of(session));
+
+            printJobService.selectFrame("sess_test", dto);
+
+            ArgumentCaptor<PrintJob> saved = ArgumentCaptor.forClass(PrintJob.class);
+            verify(printJobRepository).saveAndFlush(saved.capture());
+            return saved.getValue();
+        }
+
+        @Test
+        @DisplayName("filterType이 DEFAULT면 filterBw=true여도 DEFAULT로 저장한다")
+        void explicitDefaultOverridesFilterBw() {
+            PrintJob printJob = selectFrame(new PrintJobReqDTO.FrameSelect(FrameType.DARK, true, 0, FilterType.DEFAULT));
+
+            assertThat(printJob.getFilterType()).isEqualTo(FilterType.DEFAULT);
+            assertThat(printJob.isFilterBw()).isFalse();
+        }
+
+        @Test
+        @DisplayName("filterType이 VINTAGE면 filterBw=true여도 VINTAGE로 저장한다")
+        void explicitVintageOverridesFilterBw() {
+            PrintJob printJob = selectFrame(new PrintJobReqDTO.FrameSelect(FrameType.DARK, true, 0, FilterType.VINTAGE));
+
+            assertThat(printJob.getFilterType()).isEqualTo(FilterType.VINTAGE);
+            assertThat(printJob.isFilterBw()).isFalse();
+        }
+
+        @Test
+        @DisplayName("응답에 저장된 filterType을 담는다")
+        void respondsWithSavedFilterType() {
+            Session session = sessionWithFinalImage(null);
+            session.advanceTo(SessionStep.FRAME, LocalDateTime.now().plusMinutes(1));
+            given(sessionRepository.findBySessionId("sess_test")).willReturn(Optional.of(session));
+
+            PrintJobResDTO.FrameSelect response = printJobService.selectFrame(
+                    "sess_test", new PrintJobReqDTO.FrameSelect(FrameType.IVORY, true, 0, null));
+
+            assertThat(response.frameType()).isEqualTo(FrameType.IVORY);
+            assertThat(response.filterType()).isEqualTo(FilterType.GRAYSCALE);
+        }
+
+        @Test
+        @DisplayName("IVORY 프레임과 VINTAGE 필터를 저장한다")
+        void savesIvoryFrameAndVintageFilter() {
+            PrintJob printJob = selectFrame(new PrintJobReqDTO.FrameSelect(FrameType.IVORY, false, 0, FilterType.VINTAGE));
+
+            assertThat(printJob.getFrameType()).isEqualTo(FrameType.IVORY);
+            assertThat(printJob.getFilterType()).isEqualTo(FilterType.VINTAGE);
+            assertThat(printJob.isFilterBw()).isFalse();
+        }
+
+        @Test
+        @DisplayName("GRAYSCALE 필터면 filterBw도 true로 저장한다")
+        void keepsFilterBwInSyncWithGrayscale() {
+            PrintJob printJob = selectFrame(new PrintJobReqDTO.FrameSelect(FrameType.DARK, false, 0, FilterType.GRAYSCALE));
+
+            assertThat(printJob.getFilterType()).isEqualTo(FilterType.GRAYSCALE);
+            assertThat(printJob.isFilterBw()).isTrue();
+        }
+
+        @Test
+        @DisplayName("filterType이 없으면 filterBw=true를 GRAYSCALE로 저장한다 (이전 FE 호환)")
+        void fallsBackToGrayscaleFromFilterBw() {
+            PrintJob printJob = selectFrame(new PrintJobReqDTO.FrameSelect(FrameType.DARK, true, 0, null));
+
+            assertThat(printJob.getFilterType()).isEqualTo(FilterType.GRAYSCALE);
+        }
+
+        @Test
+        @DisplayName("filterType이 없으면 filterBw=false를 DEFAULT로 저장한다 (이전 FE 호환)")
+        void fallsBackToDefaultFromFilterBw() {
+            PrintJob printJob = selectFrame(new PrintJobReqDTO.FrameSelect(FrameType.DARK, false, 0, null));
+
+            assertThat(printJob.getFilterType()).isEqualTo(FilterType.DEFAULT);
         }
     }
 }
