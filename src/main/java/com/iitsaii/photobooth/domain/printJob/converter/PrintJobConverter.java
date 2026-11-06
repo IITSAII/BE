@@ -32,7 +32,6 @@ public class PrintJobConverter {
                 .sessionId(printJob.getSession().getSessionId())
                 .finalImageUrl(printJob.getFinalImageUrl())
                 .frameType(printJob.getFrameType())
-                .filterType(printJob.getFilterType())
                 .filterBw(printJob.isFilterBw())
                 .filterBrightness(printJob.getFilterBrightness())
                 .quantity(printJob.getSession().getQuantity())

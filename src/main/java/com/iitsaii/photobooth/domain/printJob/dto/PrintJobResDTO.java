@@ -67,9 +67,6 @@ public class PrintJobResDTO {
             @Schema(description = "선택한 프레임 종류", example = "DARK")
             FrameType frameType,
 
-            @Schema(description = "선택한 필터", example = "VINTAGE")
-            FilterType filterType,
-
             @Schema(description = "흑백 필터 적용 여부", example = "false")
             Boolean filterBw,
 
