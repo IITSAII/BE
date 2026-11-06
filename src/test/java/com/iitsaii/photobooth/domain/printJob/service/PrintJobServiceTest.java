@@ -170,6 +170,24 @@ class PrintJobServiceTest {
         }
 
         @Test
+        @DisplayName("filterType이 DEFAULT면 filterBw=true여도 DEFAULT로 저장한다")
+        void explicitDefaultOverridesFilterBw() {
+            PrintJob printJob = selectFrame(new PrintJobReqDTO.FrameSelect(FrameType.DARK, true, 0, FilterType.DEFAULT));
+
+            assertThat(printJob.getFilterType()).isEqualTo(FilterType.DEFAULT);
+            assertThat(printJob.isFilterBw()).isFalse();
+        }
+
+        @Test
+        @DisplayName("filterType이 VINTAGE면 filterBw=true여도 VINTAGE로 저장한다")
+        void explicitVintageOverridesFilterBw() {
+            PrintJob printJob = selectFrame(new PrintJobReqDTO.FrameSelect(FrameType.DARK, true, 0, FilterType.VINTAGE));
+
+            assertThat(printJob.getFilterType()).isEqualTo(FilterType.VINTAGE);
+            assertThat(printJob.isFilterBw()).isFalse();
+        }
+
+        @Test
         @DisplayName("응답에 저장된 filterType을 담는다")
         void respondsWithSavedFilterType() {
             Session session = sessionWithFinalImage(null);
