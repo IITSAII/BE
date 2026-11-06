@@ -170,6 +170,20 @@ class PrintJobServiceTest {
         }
 
         @Test
+        @DisplayName("응답에 저장된 filterType을 담는다")
+        void respondsWithSavedFilterType() {
+            Session session = sessionWithFinalImage(null);
+            session.advanceTo(SessionStep.FRAME, LocalDateTime.now().plusMinutes(1));
+            given(sessionRepository.findBySessionId("sess_test")).willReturn(Optional.of(session));
+
+            PrintJobResDTO.FrameSelect response = printJobService.selectFrame(
+                    "sess_test", new PrintJobReqDTO.FrameSelect(FrameType.IVORY, true, 0, null));
+
+            assertThat(response.frameType()).isEqualTo(FrameType.IVORY);
+            assertThat(response.filterType()).isEqualTo(FilterType.GRAYSCALE);
+        }
+
+        @Test
         @DisplayName("IVORY 프레임과 VINTAGE 필터를 저장한다")
         void savesIvoryFrameAndVintageFilter() {
             PrintJob printJob = selectFrame(new PrintJobReqDTO.FrameSelect(FrameType.IVORY, false, 0, FilterType.VINTAGE));

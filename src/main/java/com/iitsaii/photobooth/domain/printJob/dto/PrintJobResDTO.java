@@ -18,7 +18,10 @@ public class PrintJobResDTO {
             Long printJobId,
 
             @Schema(description = "선택된 프레임", example = "DARK")
-            FrameType frameType
+            FrameType frameType,
+
+            @Schema(description = "저장된 필터. 요청에 없으면 filterBw로 정한 값이다.", example = "VINTAGE")
+            FilterType filterType
     ) {}
 
     @Builder
