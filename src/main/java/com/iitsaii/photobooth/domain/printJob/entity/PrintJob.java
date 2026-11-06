@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 /** 프레임/필터가 합성된 최종 인화용 이미지와 인쇄 상태를 관리한다. */
@@ -33,6 +34,11 @@ public class PrintJob extends BaseEntity {
     @Column(name = "filter_bw", nullable = false)
     private boolean filterBw;
 
+    @Enumerated(EnumType.STRING)
+    @ColumnDefault("'DEFAULT'")
+    @Column(name = "filter_type", length = 20, nullable = false)
+    private FilterType filterType;
+
     @Column(name = "filter_brightness", nullable = false)
     private Integer filterBrightness;
 
@@ -53,10 +59,20 @@ public class PrintJob extends BaseEntity {
             boolean filterBw,
             Integer filterBrightness
     ) {
+        return of(session, frameType, filterBw ? FilterType.GRAYSCALE : FilterType.DEFAULT, filterBrightness);
+    }
+
+    public static PrintJob of(
+            Session session,
+            FrameType frameType,
+            FilterType filterType,
+            Integer filterBrightness
+    ) {
         PrintJob printJob = new PrintJob();
         printJob.session = session;
         printJob.frameType = frameType;
-        printJob.filterBw = filterBw;
+        printJob.filterType = filterType;
+        printJob.filterBw = filterType == FilterType.GRAYSCALE;
         printJob.filterBrightness = filterBrightness;
         printJob.finalImageUrl = null;
         printJob.status = PrintJobStatus.QUEUED;

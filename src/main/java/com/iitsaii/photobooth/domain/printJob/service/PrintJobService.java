@@ -52,7 +52,7 @@ public class PrintJobService {
             throw new CustomException(PrintJobErrorCode.INVALID_FRAME_STEP);
         }
 
-        PrintJob printJob = PrintJob.of(session, dto.frameType(), dto.filterBw(), dto.filterBrightness());
+        PrintJob printJob = PrintJob.of(session, dto.frameType(), dto.resolvedFilterType(), dto.filterBrightness());
 
         try {
             printJobRepository.saveAndFlush(printJob);
